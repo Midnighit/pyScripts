@@ -75,14 +75,14 @@ values = [['Last Upload: ' + date_str, '', dbAgeStr],
 lastRow = len(values)
 sheets.set_grid_size(cols=5, rows=lastRow, frozen=2)
 # set a basic filter starting from the second headline going up to the last row
-sheets.set_filter(startColumnIndex=1, endColumnIndex=5, startRowIndex=2, endRowIndex=lastRow)
+sheets.set_filter(startRowIndex=2)
 # merge the cells of the first headline
-sheets.merge_cells(startColumnIndex=1, endColumnIndex=2)
-sheets.merge_cells(startColumnIndex=3, endColumnIndex=4)
+sheets.merge_cells(endRowIndex=1, endColumnIndex=2)
+sheets.merge_cells(startColumnIndex=3, endRowIndex=1, endColumnIndex=4)
 # format the datalines
-sheets.set_alignment(startColumnIndex=1, endColumnIndex=1, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'LEFT')
-sheets.set_alignment(startColumnIndex=2, endColumnIndex=5, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'CENTER')
-sheets.set_format(startColumnIndex=3, endColumnIndex=5, startRowIndex=3, endRowIndex=lastRow, type='NUMBER', pattern='#,##0')
+sheets.set_alignment(startRowIndex=3, endColumnIndex=1, horizontalAlignment = 'LEFT')
+sheets.set_alignment(startColumnIndex=2, startRowIndex=3, horizontalAlignment = 'CENTER')
+sheets.set_format(startColumnIndex=3, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values
 sheets.update('Tiles!A1:E' + str(lastRow), values)
 sheets.commit()

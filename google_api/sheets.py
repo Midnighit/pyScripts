@@ -341,7 +341,7 @@ class Spreadsheet:
             }
         }))
 
-    def merge_cells(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1, mergeType = "MERGE_ROWS"):
+    def merge_cells(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None, mergeType = "MERGE_ROWS"):
         sheetId = self._get_sheet_id(sheetId)
         if not mergeType in ('MERGE_ROWS', 'MERGE_COLUMNS'):
             mergeType = 'MERGE_ROWS'
@@ -358,7 +358,7 @@ class Spreadsheet:
             }
         }))
 
-    def unmerge_cells(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1):
+    def unmerge_cells(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None):
         sheetId = self._get_sheet_id(sheetId)
         self.requests.append(self._create_batchUpdate_request({
             "unmergeCells": {
@@ -372,7 +372,7 @@ class Spreadsheet:
             }
         }))
 
-    def add_named_range(self, sheetId=None, name=None, namedRangeId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1):
+    def add_named_range(self, sheetId=None, name=None, namedRangeId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None):
         sheetId = self._get_sheet_id(sheetId)
         if name is None:
             return
@@ -398,7 +398,7 @@ class Spreadsheet:
             request["addNamedRange"]["namedRange"]["range"]['endRowIndex'] = endRow
         self.requests.append(request)
 
-    def set_filter(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1):
+    def set_filter(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None):
         sheetId = self._get_sheet_id(sheetId)
         self.requests.append(self._create_batchUpdate_request({
             "setBasicFilter": {
@@ -414,7 +414,7 @@ class Spreadsheet:
             }
         }))
 
-    def set_bg_color(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1, color=None, red=0, green=0, blue=0, alpha=0):
+    def set_bg_color(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None, color=None, red=0, green=0, blue=0, alpha=0):
         sheetId = self._get_sheet_id(sheetId)
         if color and color in COLORS:
             backgroundColor = self._get_color(COLORS[color][0], COLORS[color][1], COLORS[color][2], alpha)
@@ -438,7 +438,7 @@ class Spreadsheet:
             }
         }))
 
-    def set_color(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1, color=None, red=0, green=0, blue=0, alpha=0):
+    def set_color(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None, color=None, red=0, green=0, blue=0, alpha=0):
         sheetId = self._get_sheet_id(sheetId)
         if color and color in COLORS:
             color = self._get_color(COLORS[color][0], COLORS[color][1], COLORS[color][2], alpha)
@@ -464,7 +464,7 @@ class Spreadsheet:
             }
         }))
 
-    def set_format(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1, type=None, pattern=None):
+    def set_format(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None, type=None, pattern=None):
         sheetId = self._get_sheet_id(sheetId)
         numberFormat = {}
         if type in NUMBER_FORMATS:
@@ -489,7 +489,7 @@ class Spreadsheet:
             }
         }))
 
-    def set_alignment(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1, horizontalAlignment=None, verticalAlignment=None):
+    def set_alignment(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None, horizontalAlignment=None, verticalAlignment=None):
         sheetId = self._get_sheet_id(sheetId)
         userEnteredFormat = {}
         if horizontalAlignment in HORIZONTAL_ALIGNMENT:
@@ -512,7 +512,7 @@ class Spreadsheet:
             }
         }))
 
-    def set_wrap(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=1, endRowIndex=1, wrapStrategy='OVERFLOW_CELL'):
+    def set_wrap(self, sheetId=None, startColumnIndex=1, startRowIndex=1, endColumnIndex=None, endRowIndex=None, wrapStrategy='OVERFLOW_CELL'):
         sheetId = self._get_sheet_id(sheetId)
         userEnteredFormat = {}
         if wrapStrategy in WRAP_STRATEGY:
