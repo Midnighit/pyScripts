@@ -57,6 +57,7 @@ for character in session.query(Characters).all():
     excess = numTiles - allowedTiles
     fullName = character.name + (' (' + character.player.disc_user + ')' if character.player.disc_user else '')
     values.append([character.name, character.player.disc_user, fullName, character.rank_name, character.last_login.strftime("%d-%b-%Y"), 1, numTiles, excess, allowedTiles])
+session.close()
 
 # order the values by tiles in descending order
 values.sort(key=itemgetter(6, 7), reverse=True)
