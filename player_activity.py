@@ -6,11 +6,15 @@ from operator import itemgetter
 from exiles_api.model import session, ServerPopulationRecordings as PopRecs
 from google_api.sheets import Spreadsheet
 
+# save current time
+now = datetime.utcnow()
+print("Updating activity statistics sheet...")
+
 # instanciate the Spreadsheet object
 sheets = Spreadsheet(ACTIVITY_SPREADSHEET_ID, activeSheetId=ACTIVITY_SHEET_ID)
 
 # threshold beyond which no dates should be kept
-ageThreshold = datetime.utcnow() - ACTIVITY_HOLD_BACK
+ageThreshold = now - ACTIVITY_HOLD_BACK
 
 """ Read data from spreadsheet and db """
 
@@ -31,6 +35,7 @@ for record in session.query(PopRecs).order_by(desc(PopRecs.time_of_recording)).a
         values.insert(0, [checkDate.strftime("%Y-%m-%d %H:%M:%S"), int(record.population * MAX_POP)])
     else:
         break
+session.close()
 
 """ Write new data to spreadsheet """
 
@@ -57,3 +62,7 @@ while(len(dates) > 1 and dates[0] < ageThreshold):
 if rowsToDelete > 0:
     sheets.delete_rows(startIndex=2, numRows=rowsToDelete)
     sheets.commit()
+
+execTime = datetime.utcnow() - now
+execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
+print(f"Done!\nRequired time: {execTimeStr} sec.")
