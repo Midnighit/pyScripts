@@ -1,6 +1,6 @@
 from exiles_api.config import *
 from datetime import datetime
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, desc, MetaData
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, func, distinct, Text, Integer, String, Float
@@ -24,13 +24,19 @@ Session = sessionmaker(class_=RoutingSession)
 session = Session()
 GameBase.metadata = metadata
 
-RANKS = {
-    0: 'Recruit',
-    1: 'Member',
-    2: 'Officer',
-    3: 'Guildmaster',
-    255: 'Guildmaster'
-}
+RANKS = (
+    'Recruit',
+    'Member',
+    'Officer',
+    'Guildmaster'
+)
+
+def db_date():
+    now = datetime.utcnow()
+    for c in session.query(Characters).order_by(desc(Characters._last_login)).all():
+        if c.last_login < now:
+            return c.last_login
+    return None
 
 # non-db classes
 class Player:
@@ -271,6 +277,7 @@ class Characters(GameBase, Owner):
     SteamID64 = Column('playerId', Text, nullable=False)
     guild_id = Column('guild', Integer, ForeignKey('guilds.guildId'))
     name = Column('char_name', Text, nullable=False)
+    _last_login = Column('lastTimeOnline', Integer)
     # relationship
     guild = relationship('Guilds', backref="_members", foreign_keys=[guild_id])
 
@@ -286,7 +293,7 @@ class Characters(GameBase, Owner):
 
     @property
     def last_login(self):
-        return datetime.utcfromtimestamp(self.lastTimeOnline)
+        return datetime.utcfromtimestamp(self._last_login)
 
     @property
     def has_guild(self):
@@ -294,7 +301,12 @@ class Characters(GameBase, Owner):
 
     @property
     def rank_name(self):
-        return RANKS[self.rank] if not self.rank is None else None
+        if not type(self.rank) is int:
+            return None
+        # some entries seem to be buggy and outside of the normal 0-3 range
+        elif not self.rank in (0, 1, 2, 3):
+            return RANKS[3]
+        return RANKS[self.rank]
 
     def __repr__(self):
         return f"<Characters(id={self.id}, name='{self.name}')>"
