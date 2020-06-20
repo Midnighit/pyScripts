@@ -1,12 +1,16 @@
 from config import *
 from datetime import datetime
 from operator import itemgetter
-from exiles_api.model import session, db_date, Characters, Guilds
+from exiles_api import *
 from google_api.sheets import Spreadsheet
 
 # save current time
 now = datetime.utcnow()
 print("Updating tiles per member sheet...")
+
+# update the caches
+OwnersCache.update()
+ObjectsCache.update()
 
 # estimate db age by reading the last_login date of the first character in the characters table
 if dbAge := db_date():
@@ -23,48 +27,38 @@ sheets = Spreadsheet(PLAYER_SPREADSHEET_ID, activeSheetId=PLAYER_TPM_SHEET_ID)
 # Create a new list of values to add to the sheet
 date_str = now.strftime("%d-%b-%Y %H:%M UTC")
 values = []
+
+tm = TilesManager()
+tiles = tm.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
+mm = MembersManager()
+members = mm.get_members(INACTIVITY)
+
 # Compile the list for all guilds
-for guild in session.query(Guilds).all():
+for owner, data in members.items():
     # Whitelisted owners are ignored
-    if guild.id in OWNER_WHITELIST and HIDE_WHITELISTED_OWNERS:
+    if owner in OWNER_WHITELIST and HIDE_WHITELISTED_OWNERS:
         continue
-    # Number of tiles taking bMult and pMult into account
-    numTiles = guild.num_tiles(bMult=BUILDING_TILE_MULT, pMult=PLACEBALE_TILE_MULT)
-    if numTiles == 0:
+    # owners with no buildings are not listed
+    if tiles[owner] == 0:
         continue
-    # list of guild members
-    members = guild.members
+
     if ALLOWANCE_INCLUDES_INACTIVES:
         # allowedTiles is the base allowance + clan allowance per additional member
-        allowedTiles = ALLOWANCE_BASE + (len(members) - 1) * ALLOWANCE_CLAN
-        numMembers = len(members)
-        memberStr = str(numMembers)
+        allowedTiles = ALLOWANCE_BASE + (data['numMembers'] - 1) * ALLOWANCE_CLAN
+        numMembers = data['numMembers']
+        memberStr = str(data['numMembers'])
     else:
         # if there are no active players in the clan disregard
-        if len(members.active(INACTIVITY)) == 0:
+        if data['numActiveMembers'] == 0:
             continue
-        allowedTiles = ALLOWANCE_BASE + (len(members.active(INACTIVITY)) - 1) * ALLOWANCE_CLAN
-        numMembers = len(members.active(INACTIVITY))
-        memberStr = str(numMembers) + ' / ' + str(len(members))
-    tpm = numTiles / numMembers
-    values.append([guild.name, memberStr, numTiles, tpm, allowedTiles])
-
-# Compile the list for all characters
-for character in session.query(Characters).all():
-    # Whitelisted owners are ignored
-    if character.id in OWNER_WHITELIST and HIDE_WHITELISTED_OWNERS:
-        continue
-    # Discard characters that are in a guild or inactive
-    if character.has_guild or character.is_inactive(INACTIVITY):
-        continue
-    # Number of tiles taking bMult and pMult into account
-    numTiles = character.num_tiles(bMult=BUILDING_TILE_MULT, pMult=PLACEBALE_TILE_MULT)
-    if numTiles == 0:
-        continue
-    values.append([character.name, '1 / 1', numTiles, numTiles, ALLOWANCE_BASE])
+        allowedTiles = ALLOWANCE_BASE + (data['numActiveMembers'] - 1) * ALLOWANCE_CLAN
+        numMembers = data['numActiveMembers']
+        memberStr = str(data['numActiveMembers']) + ' / ' + str(data['numMembers'])
+    tpm = tiles[owner] / numMembers
+    values.append([data['name'], memberStr, tiles[owner], tpm, allowedTiles])
 
 # order the values by tiles in descending order
-x = values.sort(key=itemgetter(2, 3), reverse=True)
+values.sort(key=itemgetter(2, 3), reverse=True)
 
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
