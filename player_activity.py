@@ -3,7 +3,7 @@ from config import *
 from sqlalchemy import desc
 from datetime import datetime, timedelta
 from operator import itemgetter
-from exiles_api.model import session, ServerPopulationRecordings as PopRecs
+from exiles_api import session, ServerPopulationRecordings as PopRecs
 from google_api.sheets import Spreadsheet
 
 # save current time
