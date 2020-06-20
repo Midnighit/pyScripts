@@ -1,7 +1,7 @@
 from config import *
 from datetime import datetime
 from operator import itemgetter
-from exiles_api.model import session, Characters, Guilds
+from exiles_api import session, Characters, Guilds
 from google_api.sheets import Spreadsheet
 
 # instanciate the Spreadsheet object
