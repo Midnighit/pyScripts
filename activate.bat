@@ -1,2 +1,2 @@
 @echo off
-venv/Scripts/activate.bat
+call venv/Scripts/activate.bat
