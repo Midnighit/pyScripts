@@ -9,8 +9,8 @@ now = datetime.utcnow()
 print("Updating tiles per member sheet...")
 
 # update the caches
-OwnersCache.update()
-ObjectsCache.update()
+OwnersCache.update(RUINS_CLAN_ID)
+ObjectsCache.update(RUINS_CLAN_ID)
 
 # estimate db age by reading the last_login date of the first character in the characters table
 if dbAge := db_date():
@@ -57,8 +57,12 @@ for owner, data in members.items():
     tpm = tiles[owner] / numMembers
     values.append([data['name'], memberStr, tiles[owner], tpm, allowedTiles])
 
-# order the values by tiles in descending order
-values.sort(key=itemgetter(2, 3), reverse=True)
+# if there are any values, order them by tiles in descending order
+if values:
+    values.sort(key=itemgetter(2, 3), reverse=True)
+# if there are no values, create a dummy row so freezing top two rows doesn't fail
+else:
+    values = [['no data', '', '', '', '']]
 
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
