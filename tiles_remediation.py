@@ -34,11 +34,11 @@ for guild in session.query(Guilds).all():
     if allowedTiles >= numTiles:
         continue
     excess = numTiles - allowedTiles
-    allMembers = tuple((m.name, m.player.disc_user, m.rank_name, m.last_login.strftime("%d-%b-%Y")) for m in members)
+    allMembers = tuple((m.name, m.user.disc_user, m.rank_name, m.last_login.strftime("%d-%b-%Y")) for m in members)
     allMemberNames = "\n".join((m[0] + (' (' + m[1] + ')' if m[1] else '') for m in allMembers))
     allMemberRanks = "\n".join((m[2] for m in allMembers))
     allMemberLogin = "\n".join((m[3] for m in allMembers))
-    values.append([guild.name, guild.members.last_to_login().player.disc_user, allMemberNames, allMemberRanks, allMemberLogin, memberStr, numTiles, excess, allowedTiles])
+    values.append([guild.name, guild.members.last_to_login().user.disc_user, allMemberNames, allMemberRanks, allMemberLogin, memberStr, numTiles, excess, allowedTiles])
 
 # Compile the list for all characters
 for character in session.query(Characters).all():
@@ -55,8 +55,8 @@ for character in session.query(Characters).all():
     if allowedTiles >= numTiles:
         continue
     excess = numTiles - allowedTiles
-    fullName = character.name + (' (' + character.player.disc_user + ')' if character.player.disc_user else '')
-    values.append([character.name, character.player.disc_user, fullName, character.rank_name, character.last_login.strftime("%d-%b-%Y"), 1, numTiles, excess, allowedTiles])
+    fullName = character.name + (' (' + character.user.disc_user + ')' if character.user.disc_user else '')
+    values.append([character.name, character.user.disc_user, fullName, character.rank_name, character.last_login.strftime("%d-%b-%Y"), 1, numTiles, excess, allowedTiles])
 session.close()
 
 # order the values by tiles in descending order
