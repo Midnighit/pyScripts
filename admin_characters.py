@@ -7,10 +7,6 @@ from google_api.sheets import Spreadsheet
 now = datetime.utcnow()
 print("Updating characters sheet...")
 
-# update the caches
-OwnersCache.update(RUINS_CLAN_ID)
-ObjectsCache.update(RUINS_CLAN_ID)
-
 # estimate db age by reading the last_login date of the first character in the characters table
 if dbAge := db_date():
     dbAgeStr = "Database Date: " + dbAge.strftime("%d-%b-%Y %H:%M UTC")
