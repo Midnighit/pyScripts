@@ -125,7 +125,8 @@ for object_id, object_ts in objectscache.items():
 # go through all buildings in BuildableHealth that belong to ruins
 chars_query = session.query(Characters.id).filter_by(name='Ruins')
 guilds_query = session.query(Guilds.id).filter_by(name='Ruins')
-ruins_query = session.query(Buildings).filter(Buildings.owner_id.in_(chars_query.union(guilds_query)))
+filter = Buildings.owner_id.in_(chars_query.union(guilds_query)) & Buildings.owner_id.notin_(OWNER_WHITELIST)
+ruins_query = session.query(Buildings).filter(filter)
 for building in ruins_query.all():
     # if building has no owner, the time since last login needs to be determined via objectscache timestamp
     if building.object_id in objectscache:
