@@ -35,6 +35,10 @@ for object_id, ctd in tiles.items():
     # ensure that owner_id is in members
     if ctd['owner_id'] in members:
         name = members[ctd['owner_id']]['name']
+        if name == 'Ruins' and ctd['owner_id'] != RUINS_CLAN_ID:
+            owner = session.query(OwnersCache).get(ctd['owner_id'])
+            if owner:
+                name = owner.name + " (Ruins)"
     else:
         print("should never get here!")
         print(f"object_id: {object_id} / contents: {ctd}")
