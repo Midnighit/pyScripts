@@ -45,10 +45,10 @@ if numRows > 0:
     lastRow += numRows
     range = 'Activity Statistics!A' + str(firstInsert) + ':B' + str(lastRow)
     sheets.insert_rows(startIndex=firstInsert, numRows=numRows)
-    sheets.update(range=range, values=values)
     sheets.set_format(startRowIndex=firstInsert, endRowIndex=lastRow, type='DATE_TIME', pattern='ddd dd-mmm-yyy')
     sheets.set_format(startColumnIndex=2, endColumnIndex=2, startRowIndex=firstInsert, endRowIndex=lastRow, type='NUMBER', pattern='0')
     sheets.commit()
+    sheets.update(range=range, values=values)
 
 """ Remove old data from spreadsheet """
 

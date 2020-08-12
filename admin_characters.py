@@ -46,8 +46,8 @@ sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=9, hori
 sheets.set_alignment(startRowIndex=3, startColumnIndex=10, endColumnIndex=10, horizontalAlignment = 'RIGHT')
 sheets.set_format(startRowIndex=3, startColumnIndex=10, type='DATE', pattern='dd-mmm-yyyy hh:mm')
 # update the cells with the values
-sheets.update('Characters!A1:J' + str(lastRow), values)
 sheets.commit()
+sheets.update('Characters!A1:J' + str(lastRow), values)
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)

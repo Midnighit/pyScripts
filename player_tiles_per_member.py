@@ -28,10 +28,8 @@ sheets = Spreadsheet(PLAYER_SPREADSHEET_ID, activeSheetId=PLAYER_TPM_SHEET_ID)
 date_str = now.strftime("%d-%b-%Y %H:%M UTC")
 values = []
 
-tm = TilesManager()
-tiles = tm.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
-mm = MembersManager()
-members = mm.get_members(INACTIVITY)
+tiles = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
+members = MembersManager.get_members(INACTIVITY)
 
 # Compile the list for all guilds
 for owner, data in members.items():
@@ -39,7 +37,7 @@ for owner, data in members.items():
     if owner in OWNER_WHITELIST and HIDE_WHITELISTED_OWNERS:
         continue
     # owners with no buildings are not listed
-    if tiles[owner] == 0:
+    if not owner in tiles or tiles[owner] == 0:
         continue
 
     if ALLOWANCE_INCLUDES_INACTIVES:
@@ -51,6 +49,8 @@ for owner, data in members.items():
         # if there are no active players in the clan disregard
         if data['numActiveMembers'] == 0:
             continue
+        if type(data['numActiveMembers']) is not int:
+            print(type(data['numActiveMembers']), data['numActiveMembers'])
         allowedTiles = ALLOWANCE_BASE + (data['numActiveMembers'] - 1) * ALLOWANCE_CLAN
         numMembers = data['numActiveMembers']
         memberStr = str(data['numActiveMembers']) + ' / ' + str(data['numMembers'])

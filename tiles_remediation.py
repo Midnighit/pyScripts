@@ -75,7 +75,7 @@ sheets.merge_cells(startRowIndex=2, endRowIndex=2)
 sheets.set_bg_color(startRowIndex=2, endRowIndex=2, color="light_yellow")
 sheets.set_alignment(startRowIndex=2, endRowIndex=2, horizontalAlignment='LEFT')
 # format the datalines
-sheets.set_dimension_group(startIndex=2, endIndex=lastRow, visibility=True)
+sheets.set_dimension_group(startIndex=2, endIndex=lastRow, hidden=True)
 sheets.set_bg_color(startRowIndex=3, endRowIndex=lastRow, color="white")
 sheets.set_wrap(startColumnIndex=10, endColumnIndex=12, startRowIndex=3, endRowIndex=lastRow, wrapStrategy='WRAP')
 sheets.set_format(startColumnIndex=7, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow, type='NUMBER', pattern='#,##0')
@@ -83,5 +83,5 @@ sheets.set_alignment(endColumnIndex=5, startRowIndex=3, endRowIndex=lastRow, hor
 sheets.set_alignment(startColumnIndex=6, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'CENTER', verticalAlignment = 'MIDDLE')
 sheets.set_alignment(startColumnIndex=10, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'LEFT', verticalAlignment = 'MIDDLE')
 # update the newly inserted cells with the values
-sheets.update('Tiles!A2:J' + str(lastRow), values)
 sheets.commit()
+sheets.update('Tiles!A2:J' + str(lastRow), values)
