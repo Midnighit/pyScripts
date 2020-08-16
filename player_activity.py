@@ -11,7 +11,7 @@ now = datetime.utcnow()
 print("Updating activity statistics sheet...")
 
 # instanciate the Spreadsheet object
-sheets = Spreadsheet(PLAYER_ACTIVITY_SPREADSHEET_ID, activeSheetId=PLAYER_ACTIVITY_SHEET_ID)
+sheets = Spreadsheet(PLAYER_SPREADSHEET_ID, activeSheetId=PLAYER_ACTIVITY_SHEET_ID)
 
 # threshold beyond which no dates should be kept
 ageThreshold = now - ACTIVITY_HOLD_BACK
