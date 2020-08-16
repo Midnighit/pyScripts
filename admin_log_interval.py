@@ -15,7 +15,7 @@ while True:
     if this_ctime != last_ctime:
         diff = this_ctime - last_ctime
         last_ctime = this_ctime
-        if diff > 60:
+        if diff > 61:
             now = datetime.utcnow().strftime("%d-%b-%Y %H:%M:%S")
             sheets.insert_rows(startIndex=2)
             sheets.set_format(startRowIndex=2, endRowIndex=2, type='DATE_TIME', pattern='ddd dd-mmm-yyy')
