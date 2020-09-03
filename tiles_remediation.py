@@ -62,8 +62,11 @@ for character in session.query(Characters).all():
     values.append([character.name, disc_user, fullName, character.rank_name, character.last_login.strftime("%d-%b-%Y"), 1, numTiles, excess, allowedTiles])
 session.close()
 
-# order the values by tiles in descending order
-values.sort(key=itemgetter(6, 7), reverse=True)
+# order the values by tiles in descending order or add a token line if values are empty
+if len(values) > 0:
+    values.sort(key=itemgetter(6, 7), reverse=True)
+else:
+    values.append(["Nobody was over their tiles limit this week - yay!", '', '', '', '', '', '', '', ''])
 
 # combine headline with the new values
 values = [[f"Calendar week: {str(now.isocalendar()[1])} ({date_str})"]] + values
