@@ -1,4 +1,4 @@
-import unicodedata, re, itertools, sys
+import re, itertools
 from config import *
 from exiles_api import session, Users
 from datetime import datetime
