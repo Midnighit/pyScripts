@@ -50,8 +50,6 @@ for owner, data in members.items():
         # if there are no active players in the clan disregard
         if data['numActiveMembers'] == 0:
             continue
-        if type(data['numActiveMembers']) is not int:
-            print(type(data['numActiveMembers']), data['numActiveMembers'])
         allowedTiles = ALLOWANCE_BASE + (data['numActiveMembers'] - 1) * ALLOWANCE_CLAN
         numMembers = data['numActiveMembers']
         memberStr = str(data['numActiveMembers']) + ' / ' + str(data['numMembers'])
