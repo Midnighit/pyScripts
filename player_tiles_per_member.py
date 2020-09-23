@@ -55,6 +55,9 @@ for owner, data in members.items():
         allowedTiles = ALLOWANCE_BASE + (data['numActiveMembers'] - 1) * ALLOWANCE_CLAN
         numMembers = data['numActiveMembers']
         memberStr = str(data['numActiveMembers']) + ' / ' + str(data['numMembers'])
+    # owners with no members are not listed
+    if numMembers == 0:
+        continue
     tpm = tiles[owner] / numMembers
     values.append([data['name'], memberStr, tiles[owner], tpm, allowedTiles])
 
