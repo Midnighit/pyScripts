@@ -16,6 +16,9 @@ for guild in session.query(Guilds).all():
     # Whitelisted owners are ignored
     if guild.id in OWNER_WHITELIST:
         continue
+    # Ruins are ignored
+    if guild.name == 'Ruins':
+        continue
     # Number of tiles taking bMult and pMult into account
     numTiles = guild.num_tiles(bMult=BUILDING_TILE_MULT, pMult=PLACEBALE_TILE_MULT)
     # list of guild members
@@ -39,7 +42,7 @@ for guild in session.query(Guilds).all():
     allMemberNames = "\n".join((m[0] + (' (' + m[1] + ')' if m[1] else '') for m in allMembers))
     allMemberRanks = "\n".join((m[2] for m in allMembers))
     allMemberLogin = "\n".join((m[3] for m in allMembers))
-    disc_user = guild.members.last_to_login().user.disc_user if guild.members.last_to_login().user else ''
+    disc_user = guild.members.last_to_login().user.disc_user if guild.members.last_to_login() and guild.members.last_to_login().user else ''
     values.append([guild.name, disc_user, allMemberNames, allMemberRanks, allMemberLogin, memberStr, numTiles, excess, allowedTiles])
 
 # Compile the list for all characters
