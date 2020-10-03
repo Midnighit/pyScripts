@@ -27,6 +27,8 @@ session.query(GameEvents).filter(GameEvents.world_time <= el_ts).delete()
 
 """ Delete some blacklisted items placed in the world """
 for limit in OBJECT_LIMITS:
+    # non-existing per_member value is assumed to be 0
+    per_member = limit['pm'] if 'pm' in limit else 0
     # construct the filter consisting of the link between the two tables and the 'like' filters over the classes
     filter_link = (ActorPosition.id == Buildings.object_id) & Buildings.owner_id.notin_(OWNER_WHITELIST)
     filter_class = None
@@ -37,14 +39,18 @@ for limit in OBJECT_LIMITS:
             filter_class = filter_class | ActorPosition.class_.like(f"%{class_name}%")
     # consolidate all objects belonging to a given owner i.e. {owner_id: [object1, object2, object3...]}
     owners = {}
-    for id, owner_id in session.query(ActorPosition.id, Buildings.owner_id).filter(filter_link & (filter_class)).all():
-        if owner_id not in owners:
-            owners[owner_id] = [id]
+    for id, building in session.query(ActorPosition.id, Buildings).filter(filter_link & (filter_class)).all():
+        if building.owner not in owners:
+            owners[building.owner] = [id]
         else:
-            owners[owner_id] += [id]
+            owners[building.owner] += [id]
     # for each owner check if number of objects found exceeds the allowance
-    for owner_id, objects in owners.items():
-        diff = len(objects) - limit['max']
+    for owner, objects in owners.items():
+        if ALLOWANCE_INCLUDES_INACTIVES:
+            num_members = len(owner.members) if owner.is_guild else 1
+        else:
+            num_members = len(owner.active_members(INACTIVITY)) if owner.is_guild else 1
+        diff = len(objects) - limit['max'] - num_members * per_member
         # if allowance has been exceeded
         if diff > 0:
             # pick diff amount of object_ids from the objects list and remove them from the db
