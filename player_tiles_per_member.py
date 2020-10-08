@@ -40,6 +40,9 @@ for owner, data in members.items():
     # owners with no buildings are not listed
     if not owner in tiles or tiles[owner] == 0:
         continue
+    # owners named "Ruins" are not shown
+    if data['name'] == "Ruins":
+        continue
 
     if ALLOWANCE_INCLUDES_INACTIVES:
         # allowedTiles is the base allowance + clan allowance per additional member
