@@ -40,7 +40,9 @@ for limit in OBJECT_LIMITS:
     # consolidate all objects belonging to a given owner i.e. {owner_id: [object1, object2, object3...]}
     owners = {}
     for id, building in session.query(ActorPosition.id, Buildings).filter(filter_link & (filter_class)).all():
-        if building.owner not in owners:
+        if building.owner is None:
+            continue
+        elif building.owner not in owners:
             owners[building.owner] = [id]
         else:
             owners[building.owner] += [id]
@@ -75,7 +77,7 @@ OwnersCache.update(RUINS_CLAN_ID, autocommit=False)
 ownerscache = {id: n for id, n in session.query(OwnersCache.id, OwnersCache.name).all()}
 
 # go through all Chars/Guilds named 'Ruins' that are (no longer) inactive and rename them to their original name
-for char in session.query(Characters.id).filter((Characters.name=='Ruins') & (Characters._last_login > ia_ts)).all():
+for char in session.query(Characters).filter((Characters.name=='Ruins') & (Characters._last_login > ia_ts)).all():
     if char.id in ownerscache:
         char.name = ownerscache[char.id]
 for guild in session.query(Guilds).filter((Guilds.name=='Ruins') & (Guilds.id != RUINS_CLAN_ID)).all():
