@@ -130,7 +130,15 @@ for object_id, object_ts in objectscache.items():
         obj.owner_id = RUINS_CLAN_ID
 
 """ damage or remove buildins belonging to 'Ruins' owners """
-# go through all buildings in BuildableHealth that belong to ruins
+# index all thralls by their owners so they can be removed alongside their owners buildings
+thralls = {}
+for property in session.query(Properties).filter(Properties.name.like("%OwnerUniqueID")).all():
+    owner_id = property.owner_id
+    if owner_id in thralls:
+        thralls[owner_id] += [property.object_id]
+    else:
+        thralls[owner_id] = [property.object_id]
+
 chars_query = session.query(Characters.id).filter_by(name='Ruins')
 guilds_query = session.query(Guilds.id).filter_by(name='Ruins')
 filter = Buildings.owner_id.in_(chars_query.union(guilds_query)) & Buildings.owner_id.notin_(OWNER_WHITELIST)
@@ -147,6 +155,10 @@ for building in ruins_query.all():
     # if damage >= 100% simply remove the objects from db
     if dmg <= 0:
         Tiles.remove(building.object_id, autocommit=False)
+        # if owner had thralls remove those too
+        if building.owner_id in thralls:
+            Thralls.remove(thralls[building.owner_id], autocommit=False)
+            del thralls[building.owner_id]
     # if damage < 100% damage and that part of the object isn't already more damaged than that, damage it
     else:
         for part in session.query(BuildableHealth).filter_by(object_id=building.object_id).all():
