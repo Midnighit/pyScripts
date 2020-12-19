@@ -145,3 +145,6 @@ logs/
 
 # unittests
 test.py
+
+# special
+sql_commands.py
