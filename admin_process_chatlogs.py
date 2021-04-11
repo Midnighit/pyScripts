@@ -4,13 +4,6 @@ from config import *
 from exiles_api import ChatLogs
 from google_api.sheets import Spreadsheet
 
-def time_passed(now, msg=None):
-    if msg:
-        print(msg)
-    execTime = datetime.utcnow() - now
-    execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-    print(f"Time required so far: {execTimeStr} sec.")
-
 # save current time
 now = datetime.utcnow()
 print("Updating chat log sheets...")
