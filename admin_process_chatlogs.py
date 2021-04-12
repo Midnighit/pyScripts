@@ -51,12 +51,12 @@ if rowsToDelete > 0:
 
 # grab the newest date for comparison. If dates is empty or date is older use ageThreshold instead
 newestDate = datetimes[-1] if datetimes and datetimes[-1] > ageThreshold else ageThreshold
-# newestDate = datetime(2021, 4, 10, 12)
-# lastRow = 9
 # read only the chatfiles that are not already uploaded to the sheet. Order is from oldest to newest
 LOGS_PATH = os.path.join(SAVED_DIR_PATH, "Logs")
 logs = ChatLogs(LOGS_PATH, newestDate)
 logs.get_lines()
+# delete the oldest file if there are 3 (default) or more files and use the last edit date to rename the youngest
+logs.cycle_pippi()
 
 """ Write new data to spreadsheet """
 
