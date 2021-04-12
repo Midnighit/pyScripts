@@ -69,7 +69,7 @@ if numRows > 0:
     firstInsert = lastRow + 1
     lastRow += numRows
     range = 'Chat Log!A' + str(firstInsert) + ':E' + str(lastRow)
-    sheets.insert_rows(startIndex=firstInsert, numRows=numRows, inheritFromBefore=False)
+    sheets.insert_rows(startIndex=firstInsert, numRows=numRows, inheritFromBefore=True)
     sheets.set_format(startRowIndex=firstInsert, endRowIndex=lastRow, type='DATE_TIME', pattern='ddd dd-mmm-yyy hh:mm:ss')
     sheets.set_filter(startRowIndex=2, endRowIndex=lastRow)
     sheets.commit()
