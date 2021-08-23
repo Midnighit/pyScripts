@@ -39,11 +39,22 @@ for idx in range(len(dates)-1, 1, -1):
 
 # Get the statistics
 stats = Stats.get_tile_statistics(INACTIVITY)
-values = [[dbAge.strftime("%d/%m/%Y %H:%M:%S"), stats['numTiles'], stats['numBuildingTiles'], stats['numPlaceables'],
-           round(stats['meanTilesActiveCharsNoGuild']), round(stats['medianTilesActiveCharsNoGuild']),
-           round(stats['meanTilesActiveGuilds']), round(stats['medianTilesActiveGuilds']),
-           stats['numChars'], stats['numActiveChars'], stats['numInactiveChars'],
-           stats['numLogins'], num_lines, stats['numRuins']]]
+value = []
+value.append(dbAge.strftime("%d/%m/%Y %H:%M:%S"))
+value.append(stats['numTiles'])
+value.append(stats['numPlaceables'])
+value.append(stats['numBuildingTiles'])
+value.append(round(stats['meanTilesActiveCharsNoGuild']))
+value.append(round(stats['medianTilesActiveCharsNoGuild']))
+value.append(round(stats['meanTilesActiveGuilds']))
+value.append(round(stats['medianTilesActiveGuilds']))
+value.append(stats['numChars'])
+value.append(stats['numActiveChars'])
+value.append(stats['numInactiveChars'])
+value.append(stats['numLogins'])
+value.append(num_lines)
+value.append(stats['numRuins'])
+values = [value]
 
 # Write the statistics to the end of the spreadsheet
 sheets = Spreadsheet(PLAYER_SPREADSHEET_ID, activeSheetId=PLAYER_STATISTICS_SHEET_ID)
