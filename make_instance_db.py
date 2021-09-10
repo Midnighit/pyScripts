@@ -32,6 +32,9 @@ loc:
 with_chars:
     If set to True will automatically copy all characters for guilds contained in owner_ids as well.
     default: True
+with_alts:
+    Copies all characters belonging to accounts for any one of the targeted characters as well.
+    default: True
 inverse_owners:
     If inverse_owners is set to True, will instead copy owners and buildings owned by characters/guilds that are not given and
     outside of coordinates given.
@@ -48,7 +51,7 @@ inverse_mods:
 """
 
 make_instance_db(
-    owner_ids=[2496381, 2945124, 3012565, 2078446, 2982733, 22, 1654923, 1654980, 2993719, 2901408, 2396885, 2849597, 2213918, 3009749, 105, 107],
+    owner_ids=[2496381, 2945124, 3012565, 2078446, 2982733, 22, 1654923, 1654980, 2993719, 2901408, 2396885, 2849597, 2213918, 3009749, 107],
     mod_names=["Roleplay", "RavencrestCouriers"], 
     inverse_mods=True
 )
