@@ -1,11 +1,23 @@
-import random
+import random, logging, sys
+from logger import get_logger
 from config import *
 from datetime import datetime, timedelta
 from exiles_api import *
 
+# catch unhandled exceptions
+logger = get_logger('ruins.log', LOG_LEVEL)
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
+
 # save current time
 now = datetime.utcnow()
-print("Executing ruins script...")
+logger.info("Executing ruins script...")
 
 # make sure a ruins clan exists
 ruins_clan = session.query(Guilds).get(RUINS_CLAN_ID)
@@ -23,9 +35,11 @@ lia_ts = int((now - LONG_INACTIVE).timestamp())
 el_ts = int((now - EVENT_LOG_HOLD_BACK).timestamp())
 
 """ Cull the event log """
+logger.debug("...culling the events log.")
 session.query(GameEvents).filter(GameEvents.world_time <= el_ts).delete()
 
 """ Delete some blacklisted items placed in the world """
+logger.debug("...deleting blacklisted items.")
 for limit in OBJECT_LIMITS:
     # non-existing per_member value is assumed to be 0
     per_member = limit['pm'] if 'pm' in limit else 0
@@ -59,6 +73,7 @@ for limit in OBJECT_LIMITS:
             Tiles.remove(random.sample(objects, diff), autocommit=False)
 
 """ Delete old characters from the db and clean up behind them """
+logger.debug("...deleting old characters.")
 char_ids = set()
 player_ids = {}
 # get all characters who logged in before a configured time
@@ -73,6 +88,7 @@ DeleteChars.add(player_ids, autocommit=False)
 
 """ Rename applicable characters/guilds to ruins or rename them back to their original names"""
 # update the OwnersCache table and load it into a dict for convenient lookup
+logger.debug("...renaming characters and guilds from and to 'Ruins'.")
 OwnersCache.update(RUINS_CLAN_ID, autocommit=False)
 ownerscache = {id: n for id, n in session.query(OwnersCache.id, OwnersCache.name).all()}
 
@@ -113,6 +129,7 @@ for guild in session.query(Guilds).filter(filter).order_by(Guilds.id).all():
             guild.name = 'Ruins'
 
 """ move all ownerless objects to the dedicated ruins clan """
+logger.debug("...moving ownerless objects to dedicated ruins clan.")
 # update the ObjectsCache table and load it into a dict for convenient lookup
 ObjectsCache.update(RUINS_CLAN_ID, autocommit=False)
 objectscache = {id: ts for id, ts in session.query(ObjectsCache.id, ObjectsCache._timestamp).all()}
@@ -130,6 +147,7 @@ for object_id, object_ts in objectscache.items():
         obj.owner_id = RUINS_CLAN_ID
 
 """ damage or remove buildins belonging to 'Ruins' owners """
+logger.debug("...applying damage to and removing buildings belonging to the dedicated ruins clan.")
 # index all thralls by their owners so they can be removed alongside their owners buildings
 thralls = {}
 for property in session.query(Properties).filter(Properties.name.like("%OwnerUniqueID")).all():
@@ -166,7 +184,7 @@ for building in ruins_query.all():
                 part.health_percentage = dmg
 
 session.commit()
-
+logger.debug("...cleaning up the db.")
 for name, engine in engines.items():
     with engine.connect() as conn:
         conn.execute('VACUUM')
@@ -174,4 +192,4 @@ for name, engine in engines.items():
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-print(f"Done!\nRequired time: {execTimeStr} sec.")
+logger.info(f"Done! Required time: {execTimeStr} sec.")
