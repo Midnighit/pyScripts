@@ -35,11 +35,11 @@ lia_ts = int((now - LONG_INACTIVE).timestamp())
 el_ts = int((now - EVENT_LOG_HOLD_BACK).timestamp())
 
 """ Cull the event log """
-logger.debug("...culling the events log.")
+logger.debug("Culling the events log.")
 session.query(GameEvents).filter(GameEvents.world_time <= el_ts).delete()
 
 """ Delete some blacklisted items placed in the world """
-logger.debug("...deleting blacklisted items.")
+logger.debug("Deleting blacklisted items.")
 for limit in OBJECT_LIMITS:
     # non-existing per_member value is assumed to be 0
     per_member = limit['pm'] if 'pm' in limit else 0
@@ -53,7 +53,7 @@ for limit in OBJECT_LIMITS:
             filter_class = filter_class | ActorPosition.class_.like(f"%{class_name}%")
     # consolidate all objects belonging to a given owner i.e. {owner_id: [object1, object2, object3...]}
     owners = {}
-    for id, building in session.query(ActorPosition.id, Buildings).filter(filter_link & (filter_class)).all():
+    for id, building in session.query(ActorPosition, Buildings).filter(filter_link & (filter_class)).all():
         if building.owner is None:
             continue
         elif building.owner not in owners:
@@ -69,16 +69,26 @@ for limit in OBJECT_LIMITS:
         diff = len(objects) - limit['max'] - num_members * per_member
         # if allowance has been exceeded
         if diff > 0:
+            logger.info(f"Deleting the following objects from {owner.name} ({owner.id}):")
             # pick diff amount of object_ids from the objects list and remove them from the db
-            Tiles.remove(random.sample(objects, diff), autocommit=False)
+            picked_objects = random.sample(objects, diff)
+            picked_object_ids = []
+            for obj in picked_objects:
+                picked_object_ids.append(obj.id)
+                tp = f"TeleportPlayer {round(obj.x)} {round(obj.y)} {round(obj.z)}"
+                logger.info(f"{obj.class_[obj.class_.rfind('.')+1:]} ({obj.id}): {tp}")
+            Tiles.remove(picked_object_ids, autocommit=False)
 
 """ Delete old characters from the db and clean up behind them """
-logger.debug("...deleting old characters.")
+logger.debug("Deleting old characters.")
 char_ids = set()
 player_ids = {}
 # get all characters who logged in before a configured time
 filter = (Characters._last_login <= lia_ts) & Characters.id.notin_(OWNER_WHITELIST)
 for char in session.query(Characters).filter(filter).all():
+    user = char.user
+    player = f"{user.disc_user} ({user.disc_id}) with FuncomID {user.funcom_id} and PlayerID {char.player_id}"
+    logger.info(f"Deleting {char.name} ({char.id}) belonging to player {player}.")
     player_ids.update({char.player_id: char.name})
     char_ids.add(char.id)
 # use Characters.remove as opposed to session.delete(char) to not just remove it from the characters table
@@ -88,16 +98,18 @@ DeleteChars.add(player_ids, autocommit=False)
 
 """ Rename applicable characters/guilds to ruins or rename them back to their original names"""
 # update the OwnersCache table and load it into a dict for convenient lookup
-logger.debug("...renaming characters and guilds from and to 'Ruins'.")
+logger.debug("Renaming characters and guilds from and to 'Ruins'.")
 OwnersCache.update(RUINS_CLAN_ID, autocommit=False)
 ownerscache = {id: n for id, n in session.query(OwnersCache.id, OwnersCache.name).all()}
 
 # go through all Chars/Guilds named 'Ruins' that are (no longer) inactive and rename them to their original name
 for char in session.query(Characters).filter((Characters.name=='Ruins') & (Characters._last_login > ia_ts)).all():
     if char.id in ownerscache:
+        logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
         char.name = ownerscache[char.id]
 for guild in session.query(Guilds).filter((Guilds.name=='Ruins') & (Guilds.id != RUINS_CLAN_ID)).all():
     if not guild.is_inactive(INACTIVITY) and guild.id in ownerscache:
+        logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
         guild.name = ownerscache[guild.id]
 
 # go through all characters that are not whitelisted, not in a guild and inactive
@@ -107,9 +119,11 @@ for char in session.query(Characters).filter(filter).order_by(Characters.id).all
     has_tiles = char.has_tiles()
     # if char is named Ruins but has no buildings left, rename back to original name in case they return
     if char.name == 'Ruins' and not has_tiles and char.id in ownerscache:
+        logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
         char.name = ownerscache[char.id]
     # if char is not named Ruins and still has buildings left, rename to ruins
     elif char.name != 'Ruins' and has_tiles:
+        logger.info(f"Renaming char with id {char.id} from '{ownerscache[char.id]}' to 'Ruins'.")
         char.name = 'Ruins'
 
 # go through all guilds since filtering for inactivity is more complicated there
@@ -123,13 +137,15 @@ for guild in session.query(Guilds).filter(filter).order_by(Guilds.id).all():
             session.delete(guild)
         # if guild is named Ruins but has no buildings left, rename back to original name in case the owner(s) return
         elif guild.name == 'Ruins' and not has_tiles and guild.id in ownerscache:
+            logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
             guild.name = ownerscache[guild.id]
         # if guild is not named Ruins and still has buildings left, rename to ruins
         elif guild.name != 'Ruins' and has_tiles:
+            logger.info(f"Renaming guild with id {guild.id} from '{ownerscache[guild.id]}' to 'Ruins'.")
             guild.name = 'Ruins'
 
 """ move all ownerless objects to the dedicated ruins clan """
-logger.debug("...moving ownerless objects to dedicated ruins clan.")
+logger.debug("Moving ownerless objects to dedicated ruins clan.")
 # update the ObjectsCache table and load it into a dict for convenient lookup
 ObjectsCache.update(RUINS_CLAN_ID, autocommit=False)
 objectscache = {id: ts for id, ts in session.query(ObjectsCache.id, ObjectsCache._timestamp).all()}
@@ -139,15 +155,20 @@ ruins_clan_query = session.query(Buildings.object_id).filter_by(owner_id=RUINS_C
 ruins_clan = set(r for r, in ruins_clan_query.all())
 
 # go through all the objects that either have no owner or are in the dedicated ruins clan
+object_ids = []
 for object_id, object_ts in objectscache.items():
     # if ownerless object is not yet in the ruins clan, move it there
     if object_id not in ruins_clan:
         # since ObjectsCache was just updated, it should only contain existing objects
+        object_ids.append(object_id)
         obj = session.query(Buildings).filter_by(object_id=object_id).one()
         obj.owner_id = RUINS_CLAN_ID
 
+if len(object_ids) > 0:
+    logger.info(f"Moving objects to dedicated Ruins clan: {str(object_ids)}.")
+
 """ damage or remove buildins belonging to 'Ruins' owners """
-logger.debug("...applying damage to and removing buildings belonging to the dedicated ruins clan.")
+logger.debug("Applying damage to and removing buildings belonging to the dedicated ruins clan.")
 # index all thralls by their owners so they can be removed alongside their owners buildings
 thralls = {}
 for property in session.query(Properties).filter(Properties.name.like("%OwnerUniqueID")).all():
@@ -161,6 +182,7 @@ chars_query = session.query(Characters.id).filter_by(name='Ruins')
 guilds_query = session.query(Guilds.id).filter_by(name='Ruins')
 filter = Buildings.owner_id.in_(chars_query.union(guilds_query)) & Buildings.owner_id.notin_(OWNER_WHITELIST)
 ruins_query = session.query(Buildings).filter(filter)
+damaged, removed, killed = [], [], []
 for building in ruins_query.all():
     # if building has no owner, the time since last login needs to be determined via objectscache timestamp
     if building.object_id in objectscache:
@@ -172,19 +194,29 @@ for building in ruins_query.all():
     dmg = 1 - time_since_inactive / PURGE
     # if damage >= 100% simply remove the objects from db
     if dmg <= 0:
+        removed.append(building.object_id)
         Tiles.remove(building.object_id, autocommit=False)
         # if owner had thralls remove those too
         if building.owner_id in thralls:
+            killed += thralls[building.owner_id]
             Thralls.remove(thralls[building.owner_id], autocommit=False)
             del thralls[building.owner_id]
     # if damage < 100% damage and that part of the object isn't already more damaged than that, damage it
     else:
+        damaged.append(building.object_id)
         for part in session.query(BuildableHealth).filter_by(object_id=building.object_id).all():
             if part.health_percentage > dmg:
                 part.health_percentage = dmg
 
+if len(damaged) > 0:
+    logger.info(f"Damaging objects: {str(damaged)}.")
+if len(removed) > 0:
+    logger.info(f"Removing objects: {str(removed)}.")
+if len(killed) > 0:
+    logger.info(f"Killing thralls: {str(killed)}.")
+
 session.commit()
-logger.debug("...cleaning up the db.")
+logger.debug("Cleaning up the db.")
 for name, engine in engines.items():
     with engine.connect() as conn:
         conn.execute('VACUUM')
