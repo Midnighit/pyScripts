@@ -188,8 +188,13 @@ for building in ruins_query.all():
     if building.object_id in objectscache:
         time_since_inactive = timedelta(seconds=now_ts-objectscache[building.object_id])
     # otherwise use the timestamp of the last login
-    else:
+    elif building.owner.last_login:
         time_since_inactive = now - building.owner.last_login - INACTIVITY
+    # Why was no login recorded? Still need to find out! For now just ignore.
+    else:
+        # raise ValueError(building.object_id, building.owner_id)
+        # time_since_inactive = INACTIVITY + PURGE
+        continue
     # calculate the damage percentage based on the time since the owner became inactive relative to the PURGE timedelta
     dmg = 1 - time_since_inactive / PURGE
     # if damage >= 100% simply remove the objects from db
