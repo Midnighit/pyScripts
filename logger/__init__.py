@@ -3,8 +3,8 @@ from logging.handlers import RotatingFileHandler
 
 def get_logger(filename, loglevel=logging.INFO, echo=True):
     logger = logging.getLogger(__name__)
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
+    if not os.path.exists(SAVED_DIR_PATH + '/logs'):
+        os.mkdir(SAVED_DIR_PATH + '/logs')
 
     logger.setLevel(loglevel)
 
@@ -14,7 +14,7 @@ def get_logger(filename, loglevel=logging.INFO, echo=True):
         prn_handler.setLevel(logging.DEBUG)
         logger.addHandler(prn_handler)
 
-    file_handler = RotatingFileHandler('logs/' + filename, maxBytes=1048576, backupCount=3)
+    file_handler = RotatingFileHandler(SAVED_DIR_PATH + '/logs/' + filename, maxBytes=1048576, backupCount=3)
     file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
     file_handler.setLevel(logging.INFO)
     logger.addHandler(file_handler)
