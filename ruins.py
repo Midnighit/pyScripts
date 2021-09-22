@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from exiles_api import *
 
 # catch unhandled exceptions
-logger = get_logger('ruins.log', LOG_LEVEL)
+logger = get_logger('ruins.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -17,6 +17,8 @@ sys.excepthook = handle_exception
 
 # save current time
 now = datetime.utcnow()
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print("Executing ruins script...")
 logger.info("Executing ruins script...")
 
 # make sure a ruins clan exists
@@ -69,7 +71,7 @@ for limit in OBJECT_LIMITS:
         diff = len(objects) - limit['max'] - num_members * per_member
         # if allowance has been exceeded
         if diff > 0:
-            logger.info(f"Deleting the following objects from {owner.name} ({owner.id}):")
+            logger.info((f"Deleting the following objects from {owner.name} ({owner.id}):").encode())
             # pick diff amount of object_ids from the objects list and remove them from the db
             picked_objects = random.sample(objects, diff)
             picked_object_ids = []
@@ -85,10 +87,11 @@ char_ids = set()
 player_ids = {}
 # get all characters who logged in before a configured time
 filter = (Characters._last_login <= lia_ts) & Characters.id.notin_(OWNER_WHITELIST)
-for char in session.query(Characters).filter(filter).all():
+deleted_chars = tuple(session.query(Characters).filter(filter).all())
+for char in deleted_chars:
     user = char.user
     player = f"{user.disc_user} ({user.disc_id}) with FuncomID {user.funcom_id} and PlayerID {char.player_id}"
-    logger.info(f"Deleting {char.name} ({char.id}) belonging to player {player}.")
+    logger.info((f"Deleting {char.name} ({char.id}) belonging to player {player}.").encode())
     player_ids.update({char.player_id: char.name})
     char_ids.add(char.id)
 # use Characters.remove as opposed to session.delete(char) to not just remove it from the characters table
@@ -105,11 +108,11 @@ ownerscache = {id: n for id, n in session.query(OwnersCache.id, OwnersCache.name
 # go through all Chars/Guilds named 'Ruins' that are (no longer) inactive and rename them to their original name
 for char in session.query(Characters).filter((Characters.name=='Ruins') & (Characters._last_login > ia_ts)).all():
     if char.id in ownerscache:
-        logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
+        logger.info((f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.").encode())
         char.name = ownerscache[char.id]
 for guild in session.query(Guilds).filter((Guilds.name=='Ruins') & (Guilds.id != RUINS_CLAN_ID)).all():
     if not guild.is_inactive(INACTIVITY) and guild.id in ownerscache:
-        logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
+        logger.info((f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.").encode())
         guild.name = ownerscache[guild.id]
 
 # go through all characters that are not whitelisted, not in a guild and inactive
@@ -119,11 +122,11 @@ for char in session.query(Characters).filter(filter).order_by(Characters.id).all
     has_tiles = char.has_tiles()
     # if char is named Ruins but has no buildings left, rename back to original name in case they return
     if char.name == 'Ruins' and not has_tiles and char.id in ownerscache:
-        logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
+        logger.info((f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.").encode())
         char.name = ownerscache[char.id]
     # if char is not named Ruins and still has buildings left, rename to ruins
     elif char.name != 'Ruins' and has_tiles:
-        logger.info(f"Renaming char with id {char.id} from '{ownerscache[char.id]}' to 'Ruins'.")
+        logger.info((f"Renaming char with id {char.id} from '{ownerscache[char.id]}' to 'Ruins'.").encode())
         char.name = 'Ruins'
 
 # go through all guilds since filtering for inactivity is more complicated there
@@ -137,11 +140,11 @@ for guild in session.query(Guilds).filter(filter).order_by(Guilds.id).all():
             session.delete(guild)
         # if guild is named Ruins but has no buildings left, rename back to original name in case the owner(s) return
         elif guild.name == 'Ruins' and not has_tiles and guild.id in ownerscache:
-            logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
+            logger.info((f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.").encode())
             guild.name = ownerscache[guild.id]
         # if guild is not named Ruins and still has buildings left, rename to ruins
         elif guild.name != 'Ruins' and has_tiles:
-            logger.info(f"Renaming guild with id {guild.id} from '{ownerscache[guild.id]}' to 'Ruins'.")
+            logger.info(f"F-String with a name in it: '{ownerscache[guild.id]}'.")
             guild.name = 'Ruins'
 
 """ move all ownerless objects to the dedicated ruins clan """
@@ -155,17 +158,17 @@ ruins_clan_query = session.query(Buildings.object_id).filter_by(owner_id=RUINS_C
 ruins_clan = set(r for r, in ruins_clan_query.all())
 
 # go through all the objects that either have no owner or are in the dedicated ruins clan
-object_ids = []
+reassigned = []
 for object_id, object_ts in objectscache.items():
     # if ownerless object is not yet in the ruins clan, move it there
     if object_id not in ruins_clan:
         # since ObjectsCache was just updated, it should only contain existing objects
-        object_ids.append(object_id)
+        reassigned.append(object_id)
         obj = session.query(Buildings).filter_by(object_id=object_id).one()
         obj.owner_id = RUINS_CLAN_ID
 
-if len(object_ids) > 0:
-    logger.info(f"Moving objects to dedicated Ruins clan: {str(object_ids)}.")
+if len(reassigned) > 0:
+    logger.info(f"Moving objects to dedicated Ruins clan: {str(reassigned)}.")
 
 """ damage or remove buildins belonging to 'Ruins' owners """
 logger.debug("Applying damage to and removing buildings belonging to the dedicated ruins clan.")
@@ -187,14 +190,15 @@ for building in ruins_query.all():
     # if building has no owner, the time since last login needs to be determined via objectscache timestamp
     if building.object_id in objectscache:
         time_since_inactive = timedelta(seconds=now_ts-objectscache[building.object_id])
+    # If owner had just been deleted for inactivity assume that their buildings should also be removed
+    elif building.owner in deleted_chars:
+        time_since_inactive = INACTIVITY + PURGE
     # otherwise use the timestamp of the last login
-    elif building.owner.last_login:
+    elif building.owner.last_login is not None:
         time_since_inactive = now - building.owner.last_login - INACTIVITY
-    # Why was no login recorded? Still need to find out! For now just ignore.
+    # should never get here but catch it anyway
     else:
-        # raise ValueError(building.object_id, building.owner_id)
-        # time_since_inactive = INACTIVITY + PURGE
-        continue
+        logger.warning(f"building.owner.last_login was None for {building} when damage was supposed to be calculated.")
     # calculate the damage percentage based on the time since the owner became inactive relative to the PURGE timedelta
     dmg = 1 - time_since_inactive / PURGE
     # if damage >= 100% simply remove the objects from db
@@ -229,4 +233,6 @@ for name, engine in engines.items():
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print(f"Done! Required time: {execTimeStr} sec.")
 logger.info(f"Done! Required time: {execTimeStr} sec.")
