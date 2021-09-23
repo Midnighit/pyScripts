@@ -71,7 +71,7 @@ for limit in OBJECT_LIMITS:
         diff = len(objects) - limit['max'] - num_members * per_member
         # if allowance has been exceeded
         if diff > 0:
-            logger.info((f"Deleting the following objects from {owner.name} ({owner.id}):").encode())
+            logger.info(f"Deleting the following objects from {owner.name} ({owner.id}):")
             # pick diff amount of object_ids from the objects list and remove them from the db
             picked_objects = random.sample(objects, diff)
             picked_object_ids = []
@@ -90,8 +90,11 @@ filter = (Characters._last_login <= lia_ts) & Characters.id.notin_(OWNER_WHITELI
 deleted_chars = tuple(session.query(Characters).filter(filter).all())
 for char in deleted_chars:
     user = char.user
-    player = f"{user.disc_user} ({user.disc_id}) with FuncomID {user.funcom_id} and PlayerID {char.player_id}"
-    logger.info((f"Deleting {char.name} ({char.id}) belonging to player {player}.").encode())
+    if user:
+        player = f"{user.disc_user} ({user.disc_id}) with FuncomID {user.funcom_id} and PlayerID {char.player_id}"
+    else:
+        player = f" with FuncomID {char.account.funcom_id} and PlayerID {char.player_id}"
+    logger.info(f"Deleting {char.name} ({char.id}) belonging to player {player}.")
     player_ids.update({char.player_id: char.name})
     char_ids.add(char.id)
 # use Characters.remove as opposed to session.delete(char) to not just remove it from the characters table
@@ -108,11 +111,11 @@ ownerscache = {id: n for id, n in session.query(OwnersCache.id, OwnersCache.name
 # go through all Chars/Guilds named 'Ruins' that are (no longer) inactive and rename them to their original name
 for char in session.query(Characters).filter((Characters.name=='Ruins') & (Characters._last_login > ia_ts)).all():
     if char.id in ownerscache:
-        logger.info((f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.").encode())
+        logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
         char.name = ownerscache[char.id]
 for guild in session.query(Guilds).filter((Guilds.name=='Ruins') & (Guilds.id != RUINS_CLAN_ID)).all():
     if not guild.is_inactive(INACTIVITY) and guild.id in ownerscache:
-        logger.info((f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.").encode())
+        logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
         guild.name = ownerscache[guild.id]
 
 # go through all characters that are not whitelisted, not in a guild and inactive
@@ -122,11 +125,11 @@ for char in session.query(Characters).filter(filter).order_by(Characters.id).all
     has_tiles = char.has_tiles()
     # if char is named Ruins but has no buildings left, rename back to original name in case they return
     if char.name == 'Ruins' and not has_tiles and char.id in ownerscache:
-        logger.info((f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.").encode())
+        logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
         char.name = ownerscache[char.id]
     # if char is not named Ruins and still has buildings left, rename to ruins
     elif char.name != 'Ruins' and has_tiles:
-        logger.info((f"Renaming char with id {char.id} from '{ownerscache[char.id]}' to 'Ruins'.").encode())
+        logger.info(f"Renaming char with id {char.id} from '{ownerscache[char.id]}' to 'Ruins'.")
         char.name = 'Ruins'
 
 # go through all guilds since filtering for inactivity is more complicated there
@@ -140,11 +143,11 @@ for guild in session.query(Guilds).filter(filter).order_by(Guilds.id).all():
             session.delete(guild)
         # if guild is named Ruins but has no buildings left, rename back to original name in case the owner(s) return
         elif guild.name == 'Ruins' and not has_tiles and guild.id in ownerscache:
-            logger.info((f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.").encode())
+            logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
             guild.name = ownerscache[guild.id]
         # if guild is not named Ruins and still has buildings left, rename to ruins
         elif guild.name != 'Ruins' and has_tiles:
-            logger.info(f"F-String with a name in it: '{ownerscache[guild.id]}'.")
+            logger.info(f"Renaming guild with id {guild.id} from '{ownerscache[guild.id]}' to 'Ruins'.")
             guild.name = 'Ruins'
 
 """ move all ownerless objects to the dedicated ruins clan """
