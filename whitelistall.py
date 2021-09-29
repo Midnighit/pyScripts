@@ -1,5 +1,6 @@
-import re, itertools
-from config import *
+import re
+import itertools
+from config import WHITELIST_PATH
 from exiles_api import session, Users
 from datetime import datetime
 
@@ -11,7 +12,7 @@ try:
     with open(WHITELIST_PATH, 'r') as f:
         lines = f.readlines()
 # if file doesn't exist create an empty list
-except:
+except Exception:
     with open(WHITELIST_PATH, 'w') as f:
         pass
     lines = []
@@ -20,10 +21,10 @@ except:
 filtered = set()
 names = {}
 # define regular expression to filter out unprintable characters
-control_chars = ''.join(map(chr, itertools.chain(range(0x00,0x20), range(0x7f,0xa0))))
+control_chars = ''.join(map(chr, itertools.chain(range(0x00, 0x20), range(0x7f, 0xa0))))
 control_char_re = re.compile('[%s]' % re.escape(control_chars))
 for line in lines:
-    if line != "\n" and not "INVALID" in line:
+    if line != "\n" and "INVALID" not in line:
         # remove unprintable characters from the line
         res = control_char_re.sub('', line)
         res = res.split(':')
@@ -36,12 +37,12 @@ for line in lines:
             name = 'Unknown'
         filtered.add(id)
         # if duplicate values exist, prioritize those containing a funcom_name
-        if not id in names or names[id] == 'Unknown':
+        if id not in names or names[id] == 'Unknown':
             names[id] = name
 
 # go through the Users table and supplement missing users if any
 for user in session.query(Users).all():
-    if not user.funcom_id in filtered:
+    if user.funcom_id not in filtered:
         filtered.add(user.funcom_id)
         names[user.funcom_id] = 'Unknown'
 
