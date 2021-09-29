@@ -1,8 +1,8 @@
-import sys, os
-from config import *
-from datetime import datetime
-from statistics import mean, median
-from exiles_api import *
+import sys
+from config import RUINS_CLAN_ID, LOGS_SPREADSHEET_ID, LOGS_CHAT_SHEET_ID
+from config import INACTIVITY, PLAYER_SPREADSHEET_ID, PLAYER_STATISTICS_SHEET_ID
+from datetime import datetime, timedelta
+from exiles_api import db_date, OwnersCache, ObjectsCache, Stats
 from google_api.sheets import Spreadsheet
 
 # save current time
@@ -35,7 +35,7 @@ for idx in range(len(dates)-1, 1, -1):
     if dates[idx] > threshold24h:
         num_lines += 1
     else:
-        break;
+        break
 
 # Get the statistics
 stats = Stats.get_tile_statistics(INACTIVITY)
