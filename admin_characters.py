@@ -1,6 +1,7 @@
-from config import *
+import sys
+from config import ADMIN_SPREADSHEET_ID, ADMIN_CHARACTERS_SHEET_ID
 from datetime import datetime
-from exiles_api import *
+from exiles_api import db_date, session, Characters
 from google_api.sheets import Spreadsheet
 
 # save current time
@@ -28,11 +29,35 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
     guild_id = c.guild.id if c.guild else ''
     disc_user = c.user.disc_user if c.user and c.user.disc_user else ''
     disc_id = c.user.disc_id if c.user and c.user.disc_id else ''
-    values.append([c.name, c.id, guild_name, guild_id, c.level, disc_user, disc_id, c.account.funcom_id, c.slot, c.last_login.strftime("%d-%b-%Y %H:%M")])
+    values.append([
+                    c.name,
+                    c.id,
+                    guild_name,
+                    guild_id,
+                    c.level,
+                    disc_user,
+                    disc_id,
+                    c.account.funcom_id,
+                    c.slot,
+                    c.last_login.strftime("%d-%b-%Y %H:%M")
+                ])
 
 # generate the headlines and add them to the values list
-values = [['Last Upload: ' + date_str, '', dbAgeStr],
-          ['Character Names', 'CharacterID', 'Guild Names', 'GuildID', 'lvl', 'Discord Name', 'DiscordID', 'FuncomID', 'Slot', 'Last Login (UTC)']] + values
+values = [
+            ['Last Upload: ' + date_str, '', dbAgeStr],
+            [
+              'Character Names',
+              'CharacterID',
+              'Guild Names',
+              'GuildID',
+              'lvl',
+              'Discord Name',
+              'DiscordID',
+              'FuncomID',
+              'Slot',
+              'Last Login (UTC)'
+            ]
+        ] + values
 
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
@@ -40,10 +65,10 @@ sheets.set_grid_size(cols=10, rows=lastRow, frozen=2)
 # set a basic filter starting from the second headline going up to the last row
 sheets.set_filter(startRowIndex=2)
 # format the datalines
-sheets.set_alignment(startRowIndex=3, endColumnIndex=4, horizontalAlignment = 'LEFT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=5, endColumnIndex=5, horizontalAlignment = 'RIGHT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=9, horizontalAlignment = 'LEFT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=10, endColumnIndex=10, horizontalAlignment = 'RIGHT')
+sheets.set_alignment(startRowIndex=3, endColumnIndex=4, horizontalAlignment='LEFT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=5, endColumnIndex=5, horizontalAlignment='RIGHT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=9, horizontalAlignment='LEFT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=10, endColumnIndex=10, horizontalAlignment='RIGHT')
 sheets.set_format(startRowIndex=3, startColumnIndex=10, type='DATE', pattern='dd-mmm-yyyy hh:mm')
 # update the cells with the values
 sheets.commit()
