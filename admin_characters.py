@@ -36,7 +36,9 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
     # calculate the value as a single number for some statistics
     gold, silver, bronze = money
     money = (bronze / 100 + silver) / 100 + gold
-    wealth.append(money)
+    # try to exclude admin/support chars with access to the cheat menu from the statistics
+    if c.slot == 'active' or c.slot in ('1', '2'):
+        wealth.append(money)
 
     values.append([
                     c.name,
