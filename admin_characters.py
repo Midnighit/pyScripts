@@ -54,8 +54,6 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
                     c.last_login.strftime("%d-%b-%Y %H:%M")
                 ])
 
-
-
 # generate the headlines and add them to the values list
 values = [
             [
@@ -65,7 +63,7 @@ values = [
                 '',
                 '',
                 (
-                    'Total Pippi gold: ' + str(round(sum(wealth), 4)) + ' / ' + 
+                    'Total Pippi gold: ' + str(round(sum(wealth), 4)) + ' / ' +
                     'Avrg Pippi gold per character: ' + str(round(mean(wealth), 4)) + ' / ' +
                     'Median Pippi gold per character: ' + str(round(median(wealth), 4))
                 )
