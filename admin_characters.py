@@ -2,7 +2,7 @@ import sys
 from statistics import median, mean
 from config import ADMIN_SPREADSHEET_ID, ADMIN_CHARACTERS_SHEET_ID
 from datetime import datetime
-from exiles_api import db_date, session, Characters, Properties
+from exiles_api import db_date, session, Characters, Guilds, Properties
 from google_api.sheets import Spreadsheet
 
 # save current time
@@ -32,10 +32,7 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
     guild_id = c.guild.id if c.guild else ''
     disc_user = c.user.disc_user if c.user and c.user.disc_user else ''
     disc_id = c.user.disc_id if c.user and c.user.disc_id else ''
-    money = Properties.get_pippi_money(char_id=c.id)
-    # calculate the value as a single number for some statistics
-    gold, silver, bronze = money
-    money = (bronze / 100 + silver) / 100 + gold
+    money = Properties.get_pippi_money(char_id=c.id, as_number=True)
     # try to exclude admin/support chars with access to the cheat menu from the statistics
     if c.slot == 'active' or c.slot in ('1', '2'):
         wealth.append(money)
@@ -54,6 +51,10 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
                     c.last_login.strftime("%d-%b-%Y %H:%M")
                 ])
 
+guild_wealth = 0
+for g in session.query(Guilds).all():
+    guild_wealth += Properties.get_pippi_money(guild_id=g.id, with_chars=False, as_number=True)
+
 # generate the headlines and add them to the values list
 values = [
             [
@@ -63,9 +64,9 @@ values = [
                 '',
                 '',
                 (
-                    'Total Pippi gold: ' + str(round(sum(wealth), 4)) + ' / ' +
+                    'Total Pippi gold: ' + str(round(sum(wealth) + guild_wealth, 4)) + ' / ' +
                     'Avrg Pippi gold per character: ' + str(round(mean(wealth), 4)) + ' / ' +
-                    'Median Pippi gold per character: ' + str(round(median(wealth), 4))
+                    'Median Pippi gold per character: ' + str(median(wealth))
                 )
             ],
             [
