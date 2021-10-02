@@ -1,13 +1,31 @@
 import sys
+import logging
 from statistics import median, mean
-from config import ADMIN_SPREADSHEET_ID, ADMIN_CHARACTERS_SHEET_ID
 from datetime import datetime
 from exiles_api import db_date, session, Characters, Guilds, Properties
 from google_api.sheets import Spreadsheet
+from logger import get_logger
+from config import ADMIN_SPREADSHEET_ID, ADMIN_CHARACTERS_SHEET_ID, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
+
+# catch unhandled exceptions
+logger = get_logger('admin_characters.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
 
 # save current time
 now = datetime.utcnow()
-print("Updating characters sheet...")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print("Updating characters sheet...")
+logger.info("Updating characters sheet...")
 
 # estimate db age by reading the last_login date of the first character in the characters table
 if dbAge := db_date():
@@ -15,7 +33,7 @@ if dbAge := db_date():
 else:
     execTime = datetime.utcnow() - now
     execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-    print(f"Found no characters in db!\nRequired time: {execTimeStr} sec.")
+    logger.info(f"Found no characters in db!\nRequired time: {execTimeStr} sec.")
     sys.exit(0)
 
 # instanciate the Spreadsheet object
@@ -27,6 +45,7 @@ values = []
 # Create a list of how much Pippi money each character has for additional statistics
 wealth = []
 
+logger.debug("Compiling the character data.")
 for c in session.query(Characters).order_by(Characters._last_login.desc()).all():
     guild_name = c.guild.name if c.guild else ''
     guild_id = c.guild.id if c.guild else ''
@@ -84,6 +103,7 @@ values = [
             ]
         ] + values
 
+logger.debug("Uploading results to google sheet.")
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
 sheets.set_grid_size(cols=11, rows=lastRow, frozen=2)
@@ -101,4 +121,6 @@ sheets.update('Characters!A1:K' + str(lastRow), values)
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-print(f"Done!\nRequired time: {execTimeStr} sec.")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print(f"Done! Required time: {execTimeStr} sec.")
+logger.info(f"Done! Required time: {execTimeStr} sec.")

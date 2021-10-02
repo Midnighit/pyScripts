@@ -2,11 +2,11 @@ import sys
 import random
 import logging
 from datetime import datetime, timedelta
+from logger import get_logger
 from config import (
     LOG_LEVEL_STDOUT, LOG_LEVEL_FILE, RUINS_CLAN_ID, INACTIVITY, LONG_INACTIVE, EVENT_LOG_HOLD_BACK,
     OBJECT_LIMITS, OWNER_WHITELIST, ALLOWANCE_INCLUDES_INACTIVES, PURGE
 )
-from logger import get_logger
 from exiles_api import (
     session, engines, Guilds, GameEvents, ActorPosition, Buildings, Tiles, Characters,
     DeleteChars, OwnersCache, ObjectsCache, Properties, Thralls, BuildableHealth

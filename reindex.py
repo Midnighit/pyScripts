@@ -1,6 +1,7 @@
 import sys
+import logging
 from datetime import datetime
-from config import LOG_LEVEL, RI_DEST, RI_SOURCE
+from config import LOG_LEVEL, RI_DEST, RI_SOURCE, LOG_LEVEL_STDOUT
 from logger import get_logger
 from exiles_api import engines, session, Properties
 
@@ -20,7 +21,9 @@ sys.excepthook = handle_exception
 
 # save current time
 now = datetime.utcnow()
-logger.info("Starting the reindexing process:")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print("Starting the reindexing process...")
+logger.info("Starting the reindexing process...")
 
 dest = RI_DEST
 source = RI_SOURCE
@@ -34,6 +37,7 @@ existing_ids = (
 owner_ids = "SELECT DISTINCT id AS id FROM characters UNION	SELECT DISTINCT guildId AS id FROM guilds"
 source_idx = 0
 
+logger.debug("Create connection to game.db.")
 with engines["gamedb"].begin() as conn:
     for dest_id in dest:
         # make sure dest_id isn't taken already
@@ -75,12 +79,18 @@ with engines["gamedb"].begin() as conn:
             conn.execute(f"UPDATE purgescores SET purgeid = {dest_id} WHERE purgeid = {source_id}")
 
             # give thralls and pets (if any) belonging to source_id to the dest_id instead
+            logger.debug(f"Give thralls belonging to {source_id} to {dest_id}.")
             object_ids = Properties.get_thrall_object_ids(owner_id=source_id)
+            if object_ids:
+                logger.debug(f"Found thralls with object_ids {str(object_ids)} belonging to {source_id}.")
             Properties.give_thrall(object_ids, dest_id, autocommit=False)
 
 # try to commit all changes
+logger.debug("Commit changes.")
 session.commit()
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print(f"Done! Required time: {execTimeStr} sec.")
 logger.info(f"Done! Required time: {execTimeStr} sec.")

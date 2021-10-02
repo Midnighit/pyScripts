@@ -1,15 +1,36 @@
 import sys
+import logging
 from datetime import datetime
 from operator import itemgetter
 from math import ceil, inf
-from config import ADMIN_SPREADSHEET_ID, ADMIN_TPM_SHEET_ID, BUILDING_TILE_MULT
-from config import PLACEBALE_TILE_MULT, INACTIVITY, RUINS_CLAN_ID, ALLOWANCE_INCLUDES_INACTIVES
 from exiles_api import db_date, session, TilesManager, MembersManager, OwnersCache
 from google_api.sheets import Spreadsheet
+from logger import get_logger
+from config import (
+    ADMIN_SPREADSHEET_ID, ADMIN_TPM_SHEET_ID, BUILDING_TILE_MULT, PLACEBALE_TILE_MULT,
+    INACTIVITY, RUINS_CLAN_ID, ALLOWANCE_INCLUDES_INACTIVES, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
+)
+
+# catch unhandled exceptions
+logger = get_logger('admin_tiles_per_member.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
 
 # save current time
 now = datetime.utcnow()
-print("Updating tiles per member sheet...")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print("Updating tiles per member sheet...")
+logger.info("Updating tiles per member sheet...")
+
 
 # estimate db age by reading the last_login date of the first character in the characters table
 if dbAge := db_date():
@@ -17,7 +38,7 @@ if dbAge := db_date():
 else:
     execTime = datetime.utcnow() - now
     execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-    print(f"Found no characters in db!\nRequired time: {execTimeStr} sec.")
+    logger.info(f"Found no characters in db!\nRequired time: {execTimeStr} sec.")
     sys.exit(0)
 
 # instanciate the Spreadsheet object
@@ -27,9 +48,12 @@ sheets = Spreadsheet(ADMIN_SPREADSHEET_ID, activeSheetId=ADMIN_TPM_SHEET_ID)
 date_str = now.strftime("%d-%b-%Y %H:%M UTC")
 values = []
 
+logger.debug("Gather tiles statistics.")
 tiles = TilesManager.get_tiles_consolidated(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
+logger.debug("Gather member statistics.")
 members = MembersManager.get_members(INACTIVITY)
 
+logger.debug("Compile tiles per member data.")
 for object_id, ctd in tiles.items():
     # owner_id 0 is a game reserved id and can be ignored
     if ctd['owner_id'] == 0:
@@ -42,9 +66,9 @@ for object_id, ctd in tiles.items():
             if owner:
                 name = owner.name + " (Ruins)"
     else:
-        print("should never get here!")
-        print(f"object_id: {object_id} / contents: {ctd}")
-        print("Skipping object")
+        logger.error("should never get here!")
+        logger.error(f"object_id: {object_id} / contents: {ctd}")
+        logger.error("Skipping object")
         continue
 
     if ALLOWANCE_INCLUDES_INACTIVES:
@@ -59,7 +83,8 @@ for object_id, ctd in tiles.items():
     location = f"TeleportPlayer {ceil(ctd['x'])} {ceil(ctd['y'])} {ceil(ctd['z'])}"
     values.append([object_id, name, ctd['owner_id'], ctd['tiles'], num_members_str, tpm, ctd['class'], location])
 
-# order the values by tiles in descending order
+# sort the values by tiles in descending order
+logger.debug("Sort values for upload.")
 values.sort(key=itemgetter(3), reverse=True)
 values.sort(key=itemgetter(2))
 values.sort(key=itemgetter(5), reverse=True)
@@ -80,6 +105,7 @@ values = [
     ]
 ] + values
 
+logger.debug("Format and upload data to tiles per member sheet.")
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
 sheets.set_grid_size(cols=8, rows=lastRow, frozen=2)
@@ -127,6 +153,9 @@ sheets.set_format(startColumnIndex=6, endColumnIndex=6, startRowIndex=3, type='N
 # update the cells with the values
 sheets.commit()
 sheets.update('Tiles per member!A1:H' + str(lastRow), values)
+
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-print(f"Done!\nRequired time: {execTimeStr} sec.")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print(f"Done! Required time: {execTimeStr} sec.")
+logger.info(f"Done! Required time: {execTimeStr} sec.")

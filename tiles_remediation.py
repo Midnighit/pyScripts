@@ -1,19 +1,42 @@
+import sys
+import logging
 from datetime import datetime
 from operator import itemgetter
-from config import (
-    TILES_MGMT_SPREADSHEET_ID, TILES_MGMT_SHEET_ID, OWNER_WHITELIST, BUILDING_TILE_MULT, PLACEBALE_TILE_MULT,
-    ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN, INACTIVITY
-)
 from exiles_api import session, Characters, Guilds
 from google_api.sheets import Spreadsheet
+from logger import get_logger
+from config import (
+    TILES_MGMT_SPREADSHEET_ID, TILES_MGMT_SHEET_ID, OWNER_WHITELIST, BUILDING_TILE_MULT, PLACEBALE_TILE_MULT,
+    ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN, INACTIVITY, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
+)
+
+# catch unhandled exceptions
+logger = get_logger('tiles_remediation.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
+
+# save current time
+now = datetime.utcnow()
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print("Updating tiles remediation sheet...")
+logger.info("Updating tiles remediation sheet...")
 
 # instanciate the Spreadsheet object
 sheets = Spreadsheet(TILES_MGMT_SPREADSHEET_ID, activeSheetId=TILES_MGMT_SHEET_ID)
 
 # Create a new list of values to add to the sheet
-now = datetime.utcnow()
 date_str = now.strftime("%d-%b-%Y")
 values = []
+logger.debug("Compile guild tiles statistics.")
 # Compile the list for all guilds
 for guild in session.query(Guilds).all():
     # Whitelisted owners are ignored
@@ -64,6 +87,7 @@ for guild in session.query(Guilds).all():
     ])
 
 # Compile the list for all characters
+logger.debug("Compile character tiles statistics.")
 for character in session.query(Characters).all():
     # Whitelisted owners are ignored
     if character.id in OWNER_WHITELIST:
@@ -96,11 +120,13 @@ for character in session.query(Characters).all():
 session.close()
 
 # order the values by tiles in descending order or add a token line if values are empty
+logger.debug("Sort values for upload.")
 if len(values) > 0:
     values.sort(key=itemgetter(6, 7), reverse=True)
 else:
     values.append(["Nobody was over their tiles limit this week - yay!", '', '', '', '', '', '', '', ''])
 
+logger.debug("Format and upload data to tiles remediation sheet.")
 # combine headline with the new values
 values = [[f"Calendar week: {str(now.isocalendar()[1])} ({date_str})"]] + values
 # add enough empty lines at the top of the sheet to contain the new values
@@ -133,3 +159,9 @@ sheets.set_alignment(
 # update the newly inserted cells with the values
 sheets.commit()
 sheets.update('Tiles!A2:J' + str(lastRow), values)
+
+execTime = datetime.utcnow() - now
+execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print(f"Done! Required time: {execTimeStr} sec.")
+logger.info(f"Done! Required time: {execTimeStr} sec.")

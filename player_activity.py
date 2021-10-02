@@ -1,12 +1,34 @@
+import sys
+import logging
 from sqlalchemy import desc
 from datetime import datetime
-from config import PLAYER_SPREADSHEET_ID, PLAYER_ACTIVITY_SHEET_ID, ACTIVITY_HOLD_BACK, MAX_POP
 from exiles_api import session, ServerPopulationRecordings as PopRecs
 from google_api.sheets import Spreadsheet
+from logger import get_logger
+from config import (
+    PLAYER_SPREADSHEET_ID, PLAYER_ACTIVITY_SHEET_ID, ACTIVITY_HOLD_BACK, MAX_POP, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
+)
+
+# catch unhandled exceptions
+logger = get_logger('player_activity.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
 
 # save current time
 now = datetime.utcnow()
-print("Updating activity statistics sheet...")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print("Updating activity statistics sheet...")
+logger.info("Updating activity statistics sheet...")
+
 
 # instanciate the Spreadsheet object
 sheets = Spreadsheet(PLAYER_SPREADSHEET_ID, activeSheetId=PLAYER_ACTIVITY_SHEET_ID)
@@ -16,6 +38,7 @@ ageThreshold = now - ACTIVITY_HOLD_BACK
 
 """ Read data from spreadsheet and db """
 
+logger.debug("Reading current data from the activity sheet.")
 # read the values that are already uploaded to the sheet. Last row is kept empty
 lastRow = sheets.get_properties()["gridProperties"]["rowCount"] - 1
 # dates list is ordered from oldest (index 0) to latest
@@ -24,6 +47,7 @@ dates = [r[0] for r in sheets.read('Activity Statistics!A2:A' + str(lastRow), is
 # grab the newest date for comparison. If dates is empty or date is older use ageThreshold instead
 newestDate = dates[-1] if len(dates) > 0 and dates[-1] > ageThreshold else ageThreshold
 
+logger.debug("Reading new data from game.db.")
 values = []
 # read all the timestamps and population values from ServerPopulationRecordings starting with the newest
 for record in session.query(PopRecs).order_by(desc(PopRecs.time_of_recording)).all():
@@ -37,6 +61,7 @@ session.close()
 
 """ Write new data to spreadsheet """
 
+logger.debug("Updating activity sheet with new lines.")
 numRows = len(values)
 if numRows > 0:
     firstInsert = lastRow + 1
@@ -57,6 +82,7 @@ if numRows > 0:
 
 """ Remove old data from spreadsheet """
 
+logger.debug("Delete old lines from activity sheet.")
 rowsToDelete = 0
 # remove the oldest entry while it's older than the calculated threshold and keep count
 while(len(dates) > 1 and dates[0] < ageThreshold):
@@ -70,4 +96,6 @@ if rowsToDelete > 0:
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
-print(f"Done!\nRequired time: {execTimeStr} sec.")
+if LOG_LEVEL_STDOUT > logging.INFO:
+    print(f"Done! Required time: {execTimeStr} sec.")
+logger.info(f"Done! Required time: {execTimeStr} sec.")
