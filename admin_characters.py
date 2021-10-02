@@ -66,7 +66,7 @@ values = [
                 (
                     'Total Pippi gold: ' + str(round(sum(wealth) + guild_wealth, 4)) + ' / ' +
                     'Avrg Pippi gold per character: ' + str(round(mean(wealth), 4)) + ' / ' +
-                    'Median Pippi gold per character: ' + str(median(wealth))
+                    'Median Pippi gold per character: ' + str(round(median(wealth), 5))
                 )
             ],
             [
