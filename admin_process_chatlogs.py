@@ -107,4 +107,4 @@ execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
 if LOG_LEVEL_STDOUT > logging.INFO:
     print(f"Done! Required time: {execTimeStr} sec.")
-logger.info(f"Done!\nRequired time: {execTimeStr} sec.")
+logger.info(f"Done! Required time: {execTimeStr} sec.")
