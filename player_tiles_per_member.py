@@ -1,8 +1,12 @@
 import sys
-from config import *
 from datetime import datetime
 from operator import itemgetter
-from exiles_api import *
+from config import (
+    RUINS_CLAN_ID, PLAYER_SPREADSHEET_ID, PLAYER_TPM_SHEET_ID, INACTIVITY,
+    BUILDING_TILE_MULT, PLACEBALE_TILE_MULT, OWNER_WHITELIST, HIDE_WHITELISTED_OWNERS,
+    ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN
+)
+from exiles_api import db_date, OwnersCache, ObjectsCache, TilesManager, MembersManager
 from google_api.sheets import Spreadsheet
 
 # save current time
@@ -38,7 +42,7 @@ for owner, data in members.items():
     if owner in OWNER_WHITELIST and HIDE_WHITELISTED_OWNERS:
         continue
     # owners with no buildings are not listed
-    if not owner in tiles or tiles[owner] == 0:
+    if owner not in tiles or tiles[owner] == 0:
         continue
     # owners named "Ruins" are not shown
     if data['name'] == "Ruins":
@@ -83,8 +87,8 @@ sheets.set_filter(startRowIndex=2)
 sheets.merge_cells(endRowIndex=1, endColumnIndex=2)
 sheets.merge_cells(startColumnIndex=3, endRowIndex=1, endColumnIndex=4)
 # format the datalines
-sheets.set_alignment(startRowIndex=3, endColumnIndex=1, horizontalAlignment = 'LEFT')
-sheets.set_alignment(startColumnIndex=2, startRowIndex=3, horizontalAlignment = 'CENTER')
+sheets.set_alignment(startRowIndex=3, endColumnIndex=1, horizontalAlignment='LEFT')
+sheets.set_alignment(startColumnIndex=2, startRowIndex=3, horizontalAlignment='CENTER')
 sheets.set_format(startColumnIndex=3, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values
 sheets.update('Tiles!A1:E' + str(lastRow), values)

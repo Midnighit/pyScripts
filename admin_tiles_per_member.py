@@ -1,8 +1,10 @@
-from config import *
+import sys
 from datetime import datetime
 from operator import itemgetter
 from math import ceil, inf
-from exiles_api import *
+from config import ADMIN_SPREADSHEET_ID, ADMIN_TPM_SHEET_ID, BUILDING_TILE_MULT
+from config import PLACEBALE_TILE_MULT, INACTIVITY, RUINS_CLAN_ID, ALLOWANCE_INCLUDES_INACTIVES
+from exiles_api import db_date, session, TilesManager, MembersManager, OwnersCache
 from google_api.sheets import Spreadsheet
 
 # save current time
@@ -64,8 +66,19 @@ values.sort(key=itemgetter(5), reverse=True)
 
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
-values = [['Last Upload: ' + date_str, '', dbAgeStr],
-          ['Object ID', 'Owner Names', 'Owner ID', 'Tiles', columnTwoHeader, 'Tiles per member', 'Item Class', 'Location']] + values
+values = [
+    ['Last Upload: ' + date_str, '', dbAgeStr],
+    [
+        'Object ID',
+        'Owner Names',
+        'Owner ID',
+        'Tiles',
+        columnTwoHeader,
+        'Tiles per member',
+        'Item Class',
+        'Location'
+    ]
+] + values
 
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
@@ -75,7 +88,7 @@ sheets.delete_dimension_group()
 sheets.set_visibility(hidden=False)
 # replace inf for first row
 if values[2][5] == inf:
-        values[2][5] = '∞'
+    values[2][5] = '∞'
 # initialize some loop vars
 prev_id = values[2][2]
 prev_row = 2
@@ -104,11 +117,11 @@ sheets.set_filter(startRowIndex=2)
 sheets.merge_cells(endRowIndex=1, endColumnIndex=2)
 sheets.merge_cells(startColumnIndex=3, endColumnIndex=5, endRowIndex=1)
 # format the datalines
-sheets.set_alignment(startRowIndex=3, endColumnIndex=3, horizontalAlignment = 'LEFT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=4, endColumnIndex=4, horizontalAlignment = 'RIGHT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=5, endColumnIndex=5, horizontalAlignment = 'CENTER')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=6, horizontalAlignment = 'RIGHT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=7, endColumnIndex=8, horizontalAlignment = 'LEFT')
+sheets.set_alignment(startRowIndex=3, endColumnIndex=3, horizontalAlignment='LEFT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=4, endColumnIndex=4, horizontalAlignment='RIGHT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=5, endColumnIndex=5, horizontalAlignment='CENTER')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=6, horizontalAlignment='RIGHT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=7, endColumnIndex=8, horizontalAlignment='LEFT')
 sheets.set_format(startColumnIndex=4, endColumnIndex=4, startRowIndex=3, type='NUMBER', pattern='#,##0')
 sheets.set_format(startColumnIndex=6, endColumnIndex=6, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values

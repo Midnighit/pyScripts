@@ -1,18 +1,20 @@
-import random, logging, sys
+import sys
+from datetime import datetime
+from config import LOG_LEVEL, RI_DEST, RI_SOURCE
 from logger import get_logger
-from config import *
-from datetime import datetime, timedelta
-from exiles_api import *
-
+from exiles_api import engines, session, Properties
 
 # catch unhandled exceptions
 logger = get_logger('reindex.log', LOG_LEVEL)
+
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
 
 sys.excepthook = handle_exception
 
@@ -22,7 +24,13 @@ logger.info("Starting the reindexing process:")
 
 dest = RI_DEST
 source = RI_SOURCE
-existing_ids = "SELECT DISTINCT id FROM actor_position UNION SELECT DISTINCT object_id AS id FROM buildings UNION SELECT DISTINCT char_id AS id FROM character_stats UNION SELECT DISTINCT id AS id FROM characters UNION SELECT DISTINCT guildId AS id FROM guilds"
+existing_ids = (
+    "SELECT DISTINCT id FROM actor_position UNION "
+    "SELECT DISTINCT object_id AS id FROM buildings UNION "
+    "SELECT DISTINCT char_id AS id FROM character_stats UNION "
+    "SELECT DISTINCT id AS id FROM characters UNION "
+    "SELECT DISTINCT guildId AS id FROM guilds"
+)
 owner_ids = "SELECT DISTINCT id AS id FROM characters UNION	SELECT DISTINCT guildId AS id FROM guilds"
 source_idx = 0
 

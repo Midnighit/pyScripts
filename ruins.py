@@ -1,17 +1,28 @@
-import random, logging, sys
-from logger import get_logger
-from config import *
+import sys
+import random
+import logging
 from datetime import datetime, timedelta
-from exiles_api import *
+from config import (
+    LOG_LEVEL_STDOUT, LOG_LEVEL_FILE, RUINS_CLAN_ID, INACTIVITY, LONG_INACTIVE, EVENT_LOG_HOLD_BACK,
+    OBJECT_LIMITS, OWNER_WHITELIST, ALLOWANCE_INCLUDES_INACTIVES, PURGE
+)
+from logger import get_logger
+from exiles_api import (
+    session, engines, Guilds, GameEvents, ActorPosition, Buildings, Tiles, Characters,
+    DeleteChars, OwnersCache, ObjectsCache, Properties, Thralls, BuildableHealth
+)
 
 # catch unhandled exceptions
 logger = get_logger('ruins.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
+
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
 
 sys.excepthook = handle_exception
 
@@ -109,17 +120,17 @@ OwnersCache.update(RUINS_CLAN_ID, autocommit=False)
 ownerscache = {id: n for id, n in session.query(OwnersCache.id, OwnersCache.name).all()}
 
 # go through all Chars/Guilds named 'Ruins' that are (no longer) inactive and rename them to their original name
-for char in session.query(Characters).filter((Characters.name=='Ruins') & (Characters._last_login > ia_ts)).all():
+for char in session.query(Characters).filter((Characters.name == 'Ruins') & (Characters._last_login > ia_ts)).all():
     if char.id in ownerscache:
         logger.info(f"Renaming char with id {char.id} back from 'Ruins' to '{ownerscache[char.id]}'.")
         char.name = ownerscache[char.id]
-for guild in session.query(Guilds).filter((Guilds.name=='Ruins') & (Guilds.id != RUINS_CLAN_ID)).all():
+for guild in session.query(Guilds).filter((Guilds.name == 'Ruins') & (Guilds.id != RUINS_CLAN_ID)).all():
     if not guild.is_inactive(INACTIVITY) and guild.id in ownerscache:
         logger.info(f"Renaming guild with id {guild.id} back from 'Ruins' to '{ownerscache[guild.id]}'.")
         guild.name = ownerscache[guild.id]
 
 # go through all characters that are not whitelisted, not in a guild and inactive
-filter = (Characters.id.notin_(OWNER_WHITELIST)) & (Characters.guild_id == None) & (Characters._last_login <= ia_ts)
+filter = (Characters.id.notin_(OWNER_WHITELIST)) & (Characters.guild_id.is_(None)) & (Characters._last_login <= ia_ts)
 for char in session.query(Characters).filter(filter).order_by(Characters.id).all():
     # do function call once and store the result to save time
     has_tiles = char.has_tiles()

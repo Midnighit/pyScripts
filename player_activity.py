@@ -1,6 +1,6 @@
-from config import *
 from sqlalchemy import desc
-from datetime import datetime, timedelta
+from datetime import datetime
+from config import PLAYER_SPREADSHEET_ID, PLAYER_ACTIVITY_SHEET_ID, ACTIVITY_HOLD_BACK, MAX_POP
 from exiles_api import session, ServerPopulationRecordings as PopRecs
 from google_api.sheets import Spreadsheet
 
@@ -44,7 +44,14 @@ if numRows > 0:
     range = 'Activity Statistics!A' + str(firstInsert) + ':B' + str(lastRow)
     sheets.insert_rows(startIndex=firstInsert, numRows=numRows)
     sheets.set_format(startRowIndex=firstInsert, endRowIndex=lastRow, type='DATE_TIME', pattern='ddd dd-mmm-yyy')
-    sheets.set_format(startColumnIndex=2, endColumnIndex=2, startRowIndex=firstInsert, endRowIndex=lastRow, type='NUMBER', pattern='0')
+    sheets.set_format(
+        startColumnIndex=2,
+        endColumnIndex=2,
+        startRowIndex=firstInsert,
+        endRowIndex=lastRow,
+        type='NUMBER',
+        pattern='0'
+    )
     sheets.commit()
     sheets.update(range=range, values=values)
 

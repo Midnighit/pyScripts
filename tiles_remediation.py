@@ -1,6 +1,9 @@
-from config import *
 from datetime import datetime
 from operator import itemgetter
+from config import (
+    TILES_MGMT_SPREADSHEET_ID, TILES_MGMT_SHEET_ID, OWNER_WHITELIST, BUILDING_TILE_MULT, PLACEBALE_TILE_MULT,
+    ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN, INACTIVITY
+)
 from exiles_api import session, Characters, Guilds
 from google_api.sheets import Spreadsheet
 
@@ -38,12 +41,27 @@ for guild in session.query(Guilds).all():
         continue
     excess = numTiles - allowedTiles
 
-    allMembers = tuple((m.name, (m.user.disc_user if m.user else ''), m.rank_name, m.last_login.strftime("%d-%b-%Y")) for m in members)
+    allMembers = tuple(
+        (m.name, (m.user.disc_user if m.user else ''), m.rank_name, m.last_login.strftime("%d-%b-%Y")) for m in members
+    )
     allMemberNames = "\n".join((m[0] + (' (' + m[1] + ')' if m[1] else '') for m in allMembers))
     allMemberRanks = "\n".join((m[2] for m in allMembers))
     allMemberLogin = "\n".join((m[3] for m in allMembers))
-    disc_user = guild.members.last_to_login.user.disc_user if guild.members.last_to_login and guild.members.last_to_login.user else ''
-    values.append([guild.name, disc_user, allMemberNames, allMemberRanks, allMemberLogin, memberStr, numTiles, excess, allowedTiles])
+    if guild.members.last_to_login and guild.members.last_to_login.user:
+        disc_user = guild.members.last_to_login.user.disc_user
+    else:
+        disc_user = ''
+    values.append([
+        guild.name,
+        disc_user,
+        allMemberNames,
+        allMemberRanks,
+        allMemberLogin,
+        memberStr,
+        numTiles,
+        excess,
+        allowedTiles
+    ])
 
 # Compile the list for all characters
 for character in session.query(Characters).all():
@@ -60,9 +78,21 @@ for character in session.query(Characters).all():
     if allowedTiles >= numTiles:
         continue
     excess = numTiles - allowedTiles
-    fullName = character.name + (' (' + character.user.disc_user + ')' if character.user and character.user.disc_user else '')
+    fullName = character.name + (
+        ' (' + character.user.disc_user + ')' if character.user and character.user.disc_user else ''
+    )
     disc_user = character.user.disc_user if character.user else ''
-    values.append([character.name, disc_user, fullName, character.rank_name, character.last_login.strftime("%d-%b-%Y"), 1, numTiles, excess, allowedTiles])
+    values.append([
+        character.name,
+        disc_user,
+        fullName,
+        character.rank_name,
+        character.last_login.strftime("%d-%b-%Y"),
+        1,
+        numTiles,
+        excess,
+        allowedTiles
+    ])
 session.close()
 
 # order the values by tiles in descending order or add a token line if values are empty
@@ -84,10 +114,22 @@ sheets.set_alignment(startRowIndex=2, endRowIndex=2, horizontalAlignment='LEFT')
 sheets.set_dimension_group(startIndex=2, endIndex=lastRow, hidden=True)
 sheets.set_bg_color(startRowIndex=3, endRowIndex=lastRow, color="white")
 sheets.set_wrap(startColumnIndex=10, endColumnIndex=12, startRowIndex=3, endRowIndex=lastRow, wrapStrategy='WRAP')
-sheets.set_format(startColumnIndex=7, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow, type='NUMBER', pattern='#,##0')
-sheets.set_alignment(endColumnIndex=5, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'LEFT', verticalAlignment = 'MIDDLE')
-sheets.set_alignment(startColumnIndex=6, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'CENTER', verticalAlignment = 'MIDDLE')
-sheets.set_alignment(startColumnIndex=10, startRowIndex=3, endRowIndex=lastRow, horizontalAlignment = 'LEFT', verticalAlignment = 'MIDDLE')
+sheets.set_format(
+    startColumnIndex=7, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow,
+    type='NUMBER', pattern='#,##0'
+)
+sheets.set_alignment(
+    endColumnIndex=5, startRowIndex=3, endRowIndex=lastRow,
+    horizontalAlignment='LEFT', verticalAlignment='MIDDLE'
+)
+sheets.set_alignment(
+    startColumnIndex=6, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow,
+    horizontalAlignment='CENTER', verticalAlignment='MIDDLE'
+)
+sheets.set_alignment(
+    startColumnIndex=10, startRowIndex=3, endRowIndex=lastRow,
+    horizontalAlignment='LEFT', verticalAlignment='MIDDLE'
+)
 # update the newly inserted cells with the values
 sheets.commit()
 sheets.update('Tiles!A2:J' + str(lastRow), values)

@@ -152,3 +152,7 @@ test.py
 # special
 sql_commands.py
 make_instance_db.py
+
+# textfiles
+*.md
+*.txt

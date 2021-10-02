@@ -1,6 +1,6 @@
-import os, sys
+import os
 from datetime import datetime
-from config import *
+from config import LOGS_SPREADSHEET_ID, LOGS_CHAT_SHEET_ID, CHAT_LOG_HOLD_BACK, SAVED_DIR_PATH
 from exiles_api import ChatLogs
 from google_api.sheets import Spreadsheet
 
@@ -68,9 +68,10 @@ numRows = len(values)
 if numRows > 0:
     firstInsert = lastRow + 1
     lastRow += numRows
+    pattern = 'ddd dd-mmm-yyy hh:mm:ss'
     range = 'Chat Log!A' + str(firstInsert) + ':E' + str(lastRow)
     sheets.insert_rows(startIndex=firstInsert, numRows=numRows, inheritFromBefore=True)
-    sheets.set_format(startRowIndex=firstInsert, endRowIndex=lastRow, type='DATE_TIME', pattern='ddd dd-mmm-yyy hh:mm:ss')
+    sheets.set_format(startRowIndex=firstInsert, endRowIndex=lastRow, type='DATE_TIME', pattern=pattern)
     sheets.set_filter(startRowIndex=2, endRowIndex=lastRow)
     sheets.commit()
     sheets.update(range=range, values=values)
