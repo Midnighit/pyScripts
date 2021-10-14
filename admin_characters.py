@@ -45,16 +45,29 @@ values = []
 # Create a list of how much Pippi money each character has for additional statistics
 wealth = []
 
+
+def divby10k(num):
+    """
+    Little helper function that converts an integer number into a string and
+    then moves the decimal point 4 digits forward equaling a division by 10,000
+    If number already has a decimal point, that one is removed and digit appended
+    """
+    num = str(num)
+    part = num.split(".")
+    predec, dec = (part[0], "") if len(part) == 1 else (part[0], part[1])
+    return ("0." + predec.zfill(4) if len(predec) < 5 else predec[:-4] + "." + predec[-4:]) + dec
+
+
 logger.debug("Compiling the character data.")
 for c in session.query(Characters).order_by(Characters._last_login.desc()).all():
     guild_name = c.guild.name if c.guild else ''
     guild_id = c.guild.id if c.guild else ''
     disc_user = c.user.disc_user if c.user and c.user.disc_user else ''
     disc_id = c.user.disc_id if c.user and c.user.disc_id else ''
-    money = Properties.get_pippi_money(char_id=c.id, as_number=True)
+    bronze = Properties.get_pippi_money(char_id=c.id, as_number=True)
     # try to exclude admin/support chars with access to the cheat menu from the statistics
     if c.slot == 'active' or c.slot in ('1', '2'):
-        wealth.append(money)
+        wealth.append(bronze)
 
     values.append([
                     c.name,
@@ -62,7 +75,7 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
                     guild_name,
                     guild_id,
                     c.level,
-                    money,
+                    divby10k(bronze),
                     disc_user,
                     disc_id,
                     c.account.funcom_id,
@@ -74,6 +87,7 @@ guild_wealth = 0
 for g in session.query(Guilds).all():
     guild_wealth += Properties.get_pippi_money(guild_id=g.id, with_chars=False, as_number=True)
 
+total = divby10k(sum(wealth) + guild_wealth)
 # generate the headlines and add them to the values list
 values = [
             [
@@ -83,9 +97,9 @@ values = [
                 '',
                 '',
                 (
-                    'Total Pippi gold: ' + str(round(sum(wealth) + guild_wealth, 4)) + ' / ' +
-                    'Avrg Pippi gold per character: ' + str(round(mean(wealth), 4)) + ' / ' +
-                    'Median Pippi gold per character: ' + str(round(median(wealth), 5))
+                    'Total Pippi gold: ' + divby10k(sum(wealth) + guild_wealth) + ' / ' +
+                    'Avrg Pippi gold per character: ' + divby10k(round(mean(wealth))) + ' / ' +
+                    'Median Pippi gold per character: ' + divby10k(round(median(wealth), 1))
                 )
             ],
             [
