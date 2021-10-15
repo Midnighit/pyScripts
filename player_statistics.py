@@ -90,10 +90,10 @@ value.append(stats['numActiveChars'])
 value.append(stats['numInactiveChars'])
 value.append(stats['numLogins'])
 value.append(num_lines)
-value.append(stats['numRuins'])
 value.append(divby10k(stats['totalWealth']))
 value.append(round(divby10k(stats['meanActiveCharsWealth']), 4))
 value.append(divby10k(stats['medianActiveCharsWealth']))
+value.append(stats['numRuins'])
 values = [value]
 
 # Write the statistics to the end of the spreadsheet
