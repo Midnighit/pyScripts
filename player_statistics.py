@@ -60,6 +60,19 @@ for idx in range(len(dates)-1, 1, -1):
     else:
         break
 
+
+def divby10k(num):
+    """
+    Little helper function that converts an integer number into a string and
+    then moves the decimal point 4 digits forward equaling a division by 10,000
+    If number already has a decimal point, that one is removed and digit appended
+    """
+    num = str(num)
+    part = num.split(".")
+    predec, dec = (part[0], "") if len(part) == 1 else (part[0], part[1])
+    return float(("0." + predec.zfill(4) if len(predec) < 5 else predec[:-4] + "." + predec[-4:]) + dec)
+
+
 # Get the statistics
 logger.debug("Compile statistics from game.db.")
 stats = Stats.get_tile_statistics(INACTIVITY)
@@ -78,13 +91,16 @@ value.append(stats['numInactiveChars'])
 value.append(stats['numLogins'])
 value.append(num_lines)
 value.append(stats['numRuins'])
+value.append(divby10k(stats['totalWealth']))
+value.append(round(divby10k(stats['meanActiveCharsWealth']), 4))
+value.append(divby10k(stats['medianActiveCharsWealth']))
 values = [value]
 
 # Write the statistics to the end of the spreadsheet
 logger.debug("Update player statistics sheet.")
 sheets = Spreadsheet(PLAYER_SPREADSHEET_ID, activeSheetId=PLAYER_STATISTICS_SHEET_ID)
 lastRow = sheets.get_properties()["gridProperties"]["rowCount"]
-range = 'Statistics!A' + str(lastRow) + ':N' + str(lastRow)
+range = 'Statistics!A' + str(lastRow) + ':Q' + str(lastRow)
 sheets.insert_rows(startIndex=lastRow, numRows=1)
 sheets.commit()
 sheets.update(range=range, values=values)
