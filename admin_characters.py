@@ -55,7 +55,7 @@ def divby10k(num):
     num = str(num)
     part = num.split(".")
     predec, dec = (part[0], "") if len(part) == 1 else (part[0], part[1])
-    return ("0." + predec.zfill(4) if len(predec) < 5 else predec[:-4] + "." + predec[-4:]) + dec
+    return float(("0." + predec.zfill(4) if len(predec) < 5 else predec[:-4] + "." + predec[-4:]) + dec)
 
 
 logger.debug("Compiling the character data.")
@@ -97,9 +97,9 @@ values = [
                 '',
                 '',
                 (
-                    'Total Pippi gold: ' + divby10k(sum(wealth) + guild_wealth) + ' / ' +
-                    'Avrg Pippi gold per character: ' + divby10k(round(mean(wealth))) + ' / ' +
-                    'Median Pippi gold per character: ' + divby10k(round(median(wealth), 1))
+                    f"Total Pippi gold: {divby10k(sum(wealth) + guild_wealth):,}  / "
+                    f"Avrg Pippi gold per character: {divby10k(round(mean(wealth))):,}  / "
+                    f"Median Pippi gold per character: {divby10k(round(median(wealth), 1)):,}"
                 )
             ],
             [
