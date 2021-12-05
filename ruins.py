@@ -8,7 +8,7 @@ from config import (
     OBJECT_LIMITS, OWNER_WHITELIST, ALLOWANCE_INCLUDES_INACTIVES, PURGE
 )
 from exiles_api import (
-    session, engines, Guilds, GameEvents, ActorPosition, Buildings, Tiles, Characters,
+    StaticBuildables, session, engines, Guilds, GameEvents, ActorPosition, Buildings, Tiles, Characters,
     DeleteChars, OwnersCache, ObjectsCache, Properties, Thralls, BuildableHealth
 )
 
@@ -161,6 +161,16 @@ for guild in session.query(Guilds).filter(filter).order_by(Guilds.id).all():
             logger.info(f"Renaming guild with id {guild.id} from '{ownerscache[guild.id]}' to 'Ruins'.")
             guild.name = 'Ruins'
 
+""" move all owner_id 0 objects to the dedicated ruins clan """
+reassigned = []
+stat_builds = session.query(StaticBuildables.id).scalar_subquery()
+for tile in session.query(Buildings).filter(Buildings.object_id.notin_(stat_builds) & (Buildings.owner_id == 0)):
+    reassigned.append(tile.object_id)
+    tile.owner_id = RUINS_CLAN_ID
+
+if len(reassigned) > 0:
+    logger.info(f"Moving owner_id 0 objects to dedicated Ruins clan: {str(reassigned)}.")
+
 """ move all ownerless objects to the dedicated ruins clan """
 logger.debug("Moving ownerless objects to dedicated ruins clan.")
 # update the ObjectsCache table and load it into a dict for convenient lookup
@@ -182,7 +192,7 @@ for object_id, object_ts in objectscache.items():
         obj.owner_id = RUINS_CLAN_ID
 
 if len(reassigned) > 0:
-    logger.info(f"Moving objects to dedicated Ruins clan: {str(reassigned)}.")
+    logger.info(f"Moving no owner objects to dedicated Ruins clan: {str(reassigned)}.")
 
 """ damage or remove buildins belonging to 'Ruins' owners """
 logger.debug("Applying damage to and removing buildings belonging to the dedicated ruins clan.")
