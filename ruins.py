@@ -109,7 +109,7 @@ for char in deleted_chars:
     player_ids.update({char.player_id: char.name})
     char_ids.add(char.id)
 # use Characters.remove as opposed to session.delete(char) to not just remove it from the characters table
-Characters.remove(char_ids, autocommit=False)
+Characters.remove(char_ids, autocommit=False, whitelist=OWNER_WHITELIST)
 # Log all chars that have been delete this way so they can be removed in TERPO too when the server runs
 DeleteChars.add(player_ids, autocommit=False)
 
