@@ -102,7 +102,9 @@ sheets.set_grid_size(cols=7, rows=lastRow, frozen=2)
 # set a basic filter starting from the second headline going up to the last row
 sheets.set_filter(startRowIndex=2)
 # format the datalines
-sheets.set_alignment(startRowIndex=3, endColumnIndex=6, horizontalAlignment='LEFT')
+sheets.set_alignment(startRowIndex=3, endColumnIndex=2, horizontalAlignment='LEFT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=3, endColumnIndex=3, horizontalAlignment='CENTER')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=4, endColumnIndex=6, horizontalAlignment='LEFT')
 sheets.set_alignment(startRowIndex=3, startColumnIndex=7, horizontalAlignment='RIGHT')
 sheets.set_format(startRowIndex=3, startColumnIndex=7, type='DATE', pattern='dd-mmm-yyyy hh:mm')
 # update the cells with the values
