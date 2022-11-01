@@ -36,7 +36,7 @@ logger.debug("Reading current data from the chatlog sheet.")
 sheets = Spreadsheet(LOGS_SPREADSHEET_ID, activeSheetId=LOGS_CHAT_SHEET_ID)
 
 values = [['Last Upload: ' + now.strftime("%d-%b-%Y %H:%M"), '', 'Hold Back Time: ' + str(CHAT_LOG_HOLD_BACK.days)],
-          ['Date', 'Sender', 'Recipient', 'Channel', 'Chat message']]
+          ['Date', 'Sender', 'Channel', 'Type', 'Chat message']]
 sheets.update(range='Chat Log!A1:E2', values=values)
 
 # make sure there'r three rows in the sheet
@@ -82,14 +82,14 @@ LOGS_PATH = os.path.join(SAVED_DIR_PATH, "Logs")
 logs = ChatLogs(LOGS_PATH, newestDate)
 logs.get_lines()
 # delete the oldest file if there are 3 (default) or more files and use the last edit date to rename the youngest
-logs.cycle_pippi()
+logs.cycle_log_files()
 
 """ Write new data to spreadsheet """
 
 logger.debug("Updating chatlog sheet with new lines.")
 values = []
 for line in logs.chat_lines:
-    values.append(logs.get_chat_info(line, date_format="%Y-%m-%d %H:%M:%S"))
+    values.append(logs.get_chat_info(line))
 
 numRows = len(values)
 if numRows > 0:
