@@ -54,7 +54,7 @@ date_str = now.strftime("%d-%b-%Y %H:%M UTC")
 values = []
 
 logger.debug("Gather tiles statistics.")
-tiles = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
+tiles, placeables = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
 logger.debug("Gather member statistics.")
 members = MembersManager.get_members(INACTIVITY)
 
@@ -87,7 +87,8 @@ for owner, data in members.items():
     if numMembers == 0:
         continue
     tpm = tiles[owner] / numMembers
-    values.append([data['name'], memberStr, tiles[owner], tpm, allowedTiles])
+    ppa = round(placeables[owner]/allowedTiles, 4)
+    values.append([data['name'], memberStr, tiles[owner], placeables[owner], ppa, tpm, allowedTiles])
 
 # if there are any values, order them by tiles in descending order
 logger.debug("Sort values for upload.")
@@ -95,17 +96,17 @@ if values:
     values.sort(key=itemgetter(2, 3), reverse=True)
 # if there are no values, create a dummy row so freezing top two rows doesn't fail
 else:
-    values = [['no data', '', '', '', '']]
+    values = [['no data', '', '', '', '', '', '']]
 
 logger.debug("Update tiles per member sheet.")
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
 values = [['Last Upload: ' + date_str, '', dbAgeStr],
-          ['Owner Names', columnTwoHeader, 'Tiles', 'Tiles per member', 'Allowance']] + values
+          ['Owner Names', columnTwoHeader, 'Tiles', 'Placeables', '%', 'Tiles per member', 'Allowance']] + values
 
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
-sheets.set_grid_size(cols=5, rows=lastRow, frozen=2)
+sheets.set_grid_size(cols=7, rows=lastRow, frozen=2)
 # set a basic filter starting from the second headline going up to the last row
 sheets.set_filter(startRowIndex=2)
 # merge the cells of the first headline
@@ -114,9 +115,11 @@ sheets.merge_cells(startColumnIndex=3, endRowIndex=1, endColumnIndex=4)
 # format the datalines
 sheets.set_alignment(startRowIndex=3, endColumnIndex=1, horizontalAlignment='LEFT')
 sheets.set_alignment(startColumnIndex=2, startRowIndex=3, horizontalAlignment='CENTER')
-sheets.set_format(startColumnIndex=3, startRowIndex=3, type='NUMBER', pattern='#,##0')
+sheets.set_format(startColumnIndex=3, startRowIndex=3, endColumnIndex=4, type='NUMBER', pattern='#,##0')
+sheets.set_format(startColumnIndex=5, startRowIndex=3, endColumnIndex=5, type='NUMBER', pattern='0%')
+sheets.set_format(startColumnIndex=6, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values
-sheets.update('Tiles!A1:E' + str(lastRow), values)
+sheets.update('Tiles!A1:G' + str(lastRow), values)
 sheets.commit()
 
 execTime = datetime.utcnow() - now
