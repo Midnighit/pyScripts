@@ -66,7 +66,7 @@ for object_id, ctd in tiles.items():
             if owner:
                 name = owner.name + " (Ruins)"
     else:
-        logger.error("should never get here!")
+        logger.error("Object without owner! Should be moved to dedicated Ruins clan by ruins script.")
         logger.error(f"object_id: {object_id} / contents: {ctd}")
         logger.error("Skipping object")
         continue
@@ -81,13 +81,24 @@ for object_id, ctd in tiles.items():
     else:
         tpm = inf
     location = f"TeleportPlayer {ceil(ctd['x'])} {ceil(ctd['y'])} {ceil(ctd['z'])}"
-    values.append([object_id, name, ctd['owner_id'], ctd['tiles'], num_members_str, tpm, ctd['class'], location])
+    values.append([
+        object_id,
+        name,
+        ctd['owner_id'],
+        ctd['building_pieces'],
+        ctd['placeables'],
+        num_members_str,
+        tpm,
+        ctd['class'],
+        location]
+    )
 
 # sort the values by tiles in descending order
 logger.debug("Sort values for upload.")
+values.sort(key=itemgetter(4), reverse=True)
 values.sort(key=itemgetter(3), reverse=True)
 values.sort(key=itemgetter(2))
-values.sort(key=itemgetter(5), reverse=True)
+values.sort(key=itemgetter(6), reverse=True)
 
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
@@ -97,7 +108,8 @@ values = [
         'Object ID',
         'Owner Names',
         'Owner ID',
-        'Tiles',
+        'Building pieces',
+        'Placeables',
         columnTwoHeader,
         'Tiles per member',
         'Item Class',
@@ -108,13 +120,13 @@ values = [
 logger.debug("Format and upload data to tiles per member sheet.")
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
-sheets.set_grid_size(cols=8, rows=lastRow, frozen=2)
+sheets.set_grid_size(cols=9, rows=lastRow, frozen=2)
 # ungroup everything
 sheets.delete_dimension_group()
 sheets.set_visibility(hidden=False)
 # replace inf for first row
-if values[2][5] == inf:
-    values[2][5] = '∞'
+if values[2][6] == inf:
+    values[2][6] = '∞'
 # initialize some loop vars
 prev_id = values[2][2]
 prev_row = 2
@@ -131,8 +143,8 @@ for row in range(3, lastRow):
         prev_id = values[row][2]
         prev_row = row
     # replace all occurrences of math.inf with ∞
-    if values[row][5] == inf:
-        values[row][5] = '∞'
+    if values[row][6] == inf:
+        values[row][6] = '∞'
 # ensure that last row is being grouped too if applicable
 if multiline:
     sheets.set_dimension_group(startIndex=prev_row + 1, hidden=True)
@@ -144,15 +156,15 @@ sheets.merge_cells(endRowIndex=1, endColumnIndex=2)
 sheets.merge_cells(startColumnIndex=3, endColumnIndex=5, endRowIndex=1)
 # format the datalines
 sheets.set_alignment(startRowIndex=3, endColumnIndex=3, horizontalAlignment='LEFT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=4, endColumnIndex=4, horizontalAlignment='RIGHT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=5, endColumnIndex=5, horizontalAlignment='CENTER')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=6, horizontalAlignment='RIGHT')
-sheets.set_alignment(startRowIndex=3, startColumnIndex=7, endColumnIndex=8, horizontalAlignment='LEFT')
-sheets.set_format(startColumnIndex=4, endColumnIndex=4, startRowIndex=3, type='NUMBER', pattern='#,##0')
-sheets.set_format(startColumnIndex=6, endColumnIndex=6, startRowIndex=3, type='NUMBER', pattern='#,##0')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=4, endColumnIndex=5, horizontalAlignment='RIGHT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=6, endColumnIndex=6, horizontalAlignment='CENTER')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=7, endColumnIndex=7, horizontalAlignment='RIGHT')
+sheets.set_alignment(startRowIndex=3, startColumnIndex=8, endColumnIndex=9, horizontalAlignment='LEFT')
+sheets.set_format(startColumnIndex=4, endColumnIndex=5, startRowIndex=3, type='NUMBER', pattern='#,##0.00')
+sheets.set_format(startColumnIndex=7, endColumnIndex=7, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values
 sheets.commit()
-sheets.update('Tiles per member!A1:H' + str(lastRow), values)
+sheets.update('Tiles per member!A1:I' + str(lastRow), values)
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
