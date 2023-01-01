@@ -54,7 +54,7 @@ date_str = now.strftime("%d-%b-%Y %H:%M UTC")
 values = []
 
 logger.debug("Gather tiles statistics.")
-tiles, placeables = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
+building_pieces, placeables = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
 logger.debug("Gather member statistics.")
 members = MembersManager.get_members(INACTIVITY)
 
@@ -64,8 +64,8 @@ for owner, data in members.items():
     # Whitelisted owners are ignored
     if owner in OWNER_WHITELIST and HIDE_WHITELISTED_OWNERS:
         continue
-    # owners with no buildings are not listed
-    if owner not in tiles or tiles[owner] == 0:
+    # owners with no tiles are not listed
+    if owner not in building_pieces or building_pieces[owner] + placeables[owner] == 0:
         continue
     # owners named "Ruins" are not shown
     if data['name'] == "Ruins":
@@ -86,9 +86,20 @@ for owner, data in members.items():
     # owners with no members are not listed
     if numMembers == 0:
         continue
-    tpm = tiles[owner] / numMembers
-    ppa = round(placeables[owner]/allowedTiles, 4)
-    values.append([data['name'], memberStr, tiles[owner], placeables[owner], ppa, tpm, allowedTiles])
+
+    # tiles are all the building_pieces and placables combined
+    tiles = building_pieces[owner] + placeables[owner]
+    tpm = tiles / numMembers
+    values.append([
+        data['name'],
+        memberStr,
+        building_pieces[owner],
+        placeables[owner],
+        tiles,
+        tpm,
+        round(allowedTiles/3, 0),
+        allowedTiles
+    ])
 
 # if there are any values, order them by tiles in descending order
 logger.debug("Sort values for upload.")
@@ -96,17 +107,31 @@ if values:
     values.sort(key=itemgetter(2, 3), reverse=True)
 # if there are no values, create a dummy row so freezing top two rows doesn't fail
 else:
-    values = [['no data', '', '', '', '', '', '']]
+    values = [['no data', '', '', '', '', '', '', '']]
 
 logger.debug("Update tiles per member sheet.")
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
-values = [['Last Upload: ' + date_str, '', dbAgeStr],
-          ['Owner Names', columnTwoHeader, 'Tiles', 'Placeables', '%', 'Tiles per member', 'Allowance']] + values
+values = [
+    [
+        'Last Upload: ' + date_str, '',
+        dbAgeStr
+    ],
+    [
+        'Owner Names',
+        columnTwoHeader,
+        'Building pieces',
+        'Placeables',
+        'Total tiles',
+        'Tiles per member',
+        'Placeable allowance',
+        'Total allowance'
+    ]
+] + values
 
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
-sheets.set_grid_size(cols=7, rows=lastRow, frozen=2)
+sheets.set_grid_size(cols=8, rows=lastRow, frozen=2)
 # set a basic filter starting from the second headline going up to the last row
 sheets.set_filter(startRowIndex=2)
 # merge the cells of the first headline
@@ -115,11 +140,9 @@ sheets.merge_cells(startColumnIndex=3, endRowIndex=1, endColumnIndex=4)
 # format the datalines
 sheets.set_alignment(startRowIndex=3, endColumnIndex=1, horizontalAlignment='LEFT')
 sheets.set_alignment(startColumnIndex=2, startRowIndex=3, horizontalAlignment='CENTER')
-sheets.set_format(startColumnIndex=3, startRowIndex=3, endColumnIndex=4, type='NUMBER', pattern='#,##0')
-sheets.set_format(startColumnIndex=5, startRowIndex=3, endColumnIndex=5, type='NUMBER', pattern='0%')
-sheets.set_format(startColumnIndex=6, startRowIndex=3, type='NUMBER', pattern='#,##0')
+sheets.set_format(startColumnIndex=3, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values
-sheets.update('Tiles!A1:G' + str(lastRow), values)
+sheets.update('Tiles!A1:H' + str(lastRow), values)
 sheets.commit()
 
 execTime = datetime.utcnow() - now
