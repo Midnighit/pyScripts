@@ -6,7 +6,7 @@ from exiles_api import db_date, OwnersCache, ObjectsCache, TilesManager, Members
 from google_api.sheets import Spreadsheet
 from logger import get_logger
 from config import (
-    RUINS_CLAN_ID, PLAYER_SPREADSHEET_ID, PLAYER_TPM_SHEET_ID, INACTIVITY,
+    RUINS_CLAN_ID, PLAYER_SPREADSHEET_ID, PLAYER_TPM_SHEET_ID, INACTIVITY, PLACEBALE_TILE_MULT, PLACEBALE_TILE_RATIO,
     BUILDING_TILE_MULT, PLACEBALE_TILE_MULT, OWNER_WHITELIST, HIDE_WHITELISTED_OWNERS,
     ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
 )
@@ -54,7 +54,7 @@ date_str = now.strftime("%d-%b-%Y %H:%M UTC")
 values = []
 
 logger.debug("Gather tiles statistics.")
-building_pieces, placeables = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT)
+building_pieces, placeables = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT, do_round=False)
 logger.debug("Gather member statistics.")
 members = MembersManager.get_members(INACTIVITY)
 
@@ -87,17 +87,15 @@ for owner, data in members.items():
     if numMembers == 0:
         continue
 
-    # tiles are all the building_pieces and placables combined
-    tiles = building_pieces[owner] + placeables[owner]
-    tpm = tiles / numMembers
     values.append([
-        data['name'],
-        memberStr,
-        building_pieces[owner],
-        placeables[owner],
-        tiles,
-        tpm,
-        round(allowedTiles/3, 0),
+        data['name'],                                                               # Owner Names
+        memberStr,                                                                  # Members
+        int(round(building_pieces[owner], 0)),                                      # Building pieces
+        int(round(placeables[owner], 0)),                                           # Placeables (adjusted)
+        int(round(placeables[owner] / PLACEBALE_TILE_MULT, 0)),                     # Placeables (actual)
+        int(round(building_pieces[owner] + placeables[owner], 0)),                  # Tiles (total)
+        int(round((building_pieces[owner] + placeables[owner]) / numMembers, 0)),   # Placeables (adjusted)
+        int(round(allowedTiles / 3, 0)),                                            # Tites (total)
         allowedTiles
     ])
 
@@ -107,42 +105,50 @@ if values:
     values.sort(key=itemgetter(2, 3), reverse=True)
 # if there are no values, create a dummy row so freezing top two rows doesn't fail
 else:
-    values = [['no data', '', '', '', '', '', '', '']]
+    values = [['no data', '', '', '', '', '', '', '', '']]
 
 logger.debug("Update tiles per member sheet.")
 # generate the headlines and add them to the values list
 columnTwoHeader = "Members" if ALLOWANCE_INCLUDES_INACTIVES else "Members (active / total)"
 values = [
     [
-        'Last Upload: ' + date_str, '',
-        dbAgeStr
-    ],
-    [
+        'Last Upload: ' + date_str,
+        '',
+        dbAgeStr,
+        '',
+        '',
+        '',
+        '=IMAGE("https://i.imgur.com/v2UO6v5.png",1)',
+        'Allowance'
+    ], [
         'Owner Names',
         columnTwoHeader,
         'Building pieces',
-        'Placeables',
-        'Total tiles',
+        'Placeables (adjusted)',
+        'Placeables (actual)',
+        'Tiles (total)',
         'Tiles per member',
-        'Placeable allowance',
-        'Total allowance'
+        'Placeable (adjusted)',
+        'Tiles (total)'
     ]
 ] + values
 
 # set the gridsize so it fits in all the values including the two headlines
 lastRow = len(values)
-sheets.set_grid_size(cols=8, rows=lastRow, frozen=2)
+sheets.set_grid_size(cols=9, rows=lastRow, frozen=2)
 # set a basic filter starting from the second headline going up to the last row
 sheets.set_filter(startRowIndex=2)
-# merge the cells of the first headline
-sheets.merge_cells(endRowIndex=1, endColumnIndex=2)
-sheets.merge_cells(startColumnIndex=3, endRowIndex=1, endColumnIndex=4)
+# merge and format the cells of the first headline
+sheets.merge_cells(startColumnIndex=1, endColumnIndex=2, endRowIndex=1)
+sheets.merge_cells(startColumnIndex=3, endColumnIndex=4, endRowIndex=1)
+sheets.merge_cells(startColumnIndex=8, endColumnIndex=9, endRowIndex=1)
+sheets.set_alignment(startColumnIndex=8, endColumnIndex=9, startRowIndex=1, endRowIndex=1, horizontalAlignment='CENTER')
 # format the datalines
-sheets.set_alignment(startRowIndex=3, endColumnIndex=1, horizontalAlignment='LEFT')
-sheets.set_alignment(startColumnIndex=2, startRowIndex=3, horizontalAlignment='CENTER')
+sheets.set_alignment(startColumnIndex=1, endColumnIndex=1, startRowIndex=3, horizontalAlignment='LEFT')
+sheets.set_alignment(startColumnIndex=2, endColumnIndex=9, startRowIndex=3, horizontalAlignment='CENTER')
 sheets.set_format(startColumnIndex=3, startRowIndex=3, type='NUMBER', pattern='#,##0')
 # update the cells with the values
-sheets.update('Tiles!A1:H' + str(lastRow), values)
+sheets.update('Tiles!A1:I' + str(lastRow), values)
 sheets.commit()
 
 execTime = datetime.utcnow() - now
