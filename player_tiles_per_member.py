@@ -128,7 +128,7 @@ values = [
         'Placeables (actual)',
         'Tiles (total)',
         'Tiles per member',
-        'Placeable (adjusted)',
+        'Placeables (adjusted)',
         'Tiles (total)'
     ]
 ] + values
