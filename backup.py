@@ -1,10 +1,13 @@
-import os, sys, logging, shutil
+import os
+import sys
+import logging
+import shutil
 from datetime import datetime, timedelta
 from logger import get_logger
 from config import LOG_LEVEL_STDOUT, LOG_LEVEL_FILE, SAVED_DIR_PATH, BACKUP_DIR_PATH, FILES_TO_BACKUP
 
 # catch unhandled exceptions
-logger = get_logger('whitelistall.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
+logger = get_logger('backup.log', log_level_stdout=LOG_LEVEL_STDOUT, log_level_file=LOG_LEVEL_FILE)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -13,6 +16,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
 
 sys.excepthook = handle_exception
 
@@ -52,12 +56,12 @@ for directory in directories:
     except Exception:
         # not a date, skip over
         continue
-    
+
     # directory for the date in the logfile already exists
     if dir_d.date() == log_dt.date():
         backupdir = os.path.join(BACKUP_DIR_PATH, directory)
         break
-    
+
     # if the last directory is older than the logfile, a new directory has to be created
     elif dir_d < log_dt:
         backupdir = os.path.join(BACKUP_DIR_PATH, log_dt.strftime('%Y.%m.%d'))
@@ -113,4 +117,3 @@ execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
 if LOG_LEVEL_STDOUT > logging.INFO:
     print(f"Done! Required time: {execTimeStr} sec.")
 logger.info(f"Done! Required time: {execTimeStr} sec.")
-
