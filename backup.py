@@ -84,7 +84,7 @@ for directory in directories:
 # if no directory with a valid time is in backupdir, one has to be created
 if not dir_t:
     dir_t = log_dt.strftime('%H.%M.%S')
-    backupdir = os.join(backupdir, dir_t)
+    backupdir = os.path.join(backupdir, dir_t)
     os.mkdir(backupdir)
 # if the latest valid timestamp is not within 5 minutes of the time of the log, create a new directory as well
 elif (log_dt - timedelta(minutes=5)) > datetime.combine(dir_d, dir_t):
