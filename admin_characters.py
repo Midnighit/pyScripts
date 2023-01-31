@@ -64,7 +64,7 @@ for c in session.query(Characters).order_by(Characters._last_login.desc()).all()
     guild_id = c.guild.id if c.guild else ''
     disc_user = c.user.disc_user if c.user and c.user.disc_user else ''
     disc_id = c.user.disc_id if c.user and c.user.disc_id else ''
-    bronze = Properties.get_pippi_money(char_id=c.id, as_number=True)
+    bronze = Properties.get_pippi_money(character_id=c.id, as_number=True)
     # try to exclude admin/support chars with access to the cheat menu from the statistics
     if c.slot == 'active' or c.slot in ('1', '2'):
         wealth.append(bronze)
