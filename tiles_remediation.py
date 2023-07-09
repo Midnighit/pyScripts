@@ -2,12 +2,13 @@ import sys
 import logging
 from datetime import datetime
 from operator import itemgetter
-from exiles_api import session, Characters, Guilds
+from exiles_api import session, Characters, Guilds, TilesManager
 from google_api.sheets import Spreadsheet
 from logger import get_logger
 from config import (
     TILES_MGMT_SPREADSHEET_ID, TILES_MGMT_SHEET_ID, OWNER_WHITELIST, BUILDING_TILE_MULT, PLACEBALE_TILE_MULT,
-    ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN, INACTIVITY, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
+    ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN, INACTIVITY, LOG_LEVEL_STDOUT, LOG_LEVEL_FILE,
+    PLACEBALE_TILE_RATIO
 )
 
 # catch unhandled exceptions
@@ -36,7 +37,8 @@ sheets = Spreadsheet(TILES_MGMT_SPREADSHEET_ID, activeSheetId=TILES_MGMT_SHEET_I
 # Create a new list of values to add to the sheet
 date_str = now.strftime("%d-%b-%Y")
 values = []
-logger.debug("Compile guild tiles statistics.")
+logger.debug("Gather tiles statistics.")
+building_pieces, placeables = TilesManager.get_tiles_by_owner(BUILDING_TILE_MULT, PLACEBALE_TILE_MULT, do_round=False)
 # Compile the list for all guilds
 for guild in session.query(Guilds).all():
     # Whitelisted owners are ignored
@@ -45,24 +47,35 @@ for guild in session.query(Guilds).all():
     # Ruins are ignored
     if guild.name == 'Ruins':
         continue
+    # Discard guilds with no tiles
+    if guild.id not in building_pieces:
+        continue
+    # building pices
+    buildingPieces = building_pieces[guild.id]
+    # the adjusted number of placeables
+    placeablesAdjusted = placeables[guild.id]
     # Number of tiles taking bMult and pMult into account
-    numTiles = guild.num_tiles(bMult=BUILDING_TILE_MULT, pMult=PLACEBALE_TILE_MULT)
+    totalTiles = buildingPieces + placeablesAdjusted
     # list of guild members
     members = guild.members
     if ALLOWANCE_INCLUDES_INACTIVES:
-        # allowedTiles is the base allowance + clan allowance per additional member
-        allowedTiles = ALLOWANCE_BASE + (len(members) - 1) * ALLOWANCE_CLAN
+        # allowedTilesTotal is the base allowance + clan allowance per additional member
+        allowedTilesTotal = ALLOWANCE_BASE + (len(members) - 1) * ALLOWANCE_CLAN
         memberStr = len(members)
     else:
         # if there are no active players in the clan disregard
         if len(members.active(INACTIVITY)) == 0:
             continue
-        allowedTiles = ALLOWANCE_BASE + (len(members.active(INACTIVITY)) - 1) * ALLOWANCE_CLAN
+        allowedTilesTotal = ALLOWANCE_BASE + (len(members.active(INACTIVITY)) - 1) * ALLOWANCE_CLAN
         memberStr = str(len(members.active(INACTIVITY))) + ' / ' + str(len(members))
-    # if allowedTiles is greater than the absolute amount of tiles of the guild disregard
-    if allowedTiles >= numTiles:
+
+    # allowedPlaceables is a ratio of the total tiles
+    allowedPlaceables = allowedTilesTotal * PLACEBALE_TILE_RATIO
+    # if none of the allowances are exceeded disregard the guild
+    if allowedTilesTotal >= round(totalTiles, 0) and allowedPlaceables >= round(placeablesAdjusted, 0):
         continue
-    excess = numTiles - allowedTiles
+    excessTotal = max(totalTiles - allowedTilesTotal, 0)
+    excessPlaceables = max(placeablesAdjusted - allowedPlaceables, 0)
 
     allMembers = tuple(
         (m.name, (m.user.disc_user if m.user else ''), m.rank_name, m.last_login.strftime("%d-%b-%Y")) for m in members
@@ -75,15 +88,19 @@ for guild in session.query(Guilds).all():
     else:
         disc_user = ''
     values.append([
-        guild.name,
-        disc_user,
-        allMemberNames,
-        allMemberRanks,
-        allMemberLogin,
-        memberStr,
-        numTiles,
-        excess,
-        allowedTiles
+        guild.name,                         # Owner
+        disc_user,                          # Discord Name (last to login)
+        allMemberNames,                     # (Char Name Discord Name)
+        allMemberRanks,                     # (Rank)
+        allMemberLogin,                     # (Last Login)
+        memberStr,                          # Members (active / total)
+        int(round(buildingPieces, 0)),      # Building Pieces
+        int(round(placeablesAdjusted, 0)),  # Placeables (adjusted)
+        int(round(totalTiles, 0)),          # Tiles (total)
+        int(round(excessPlaceables, 0)),    # (excess placeables)
+        int(round(excessTotal, 0)),         # (excess total)
+        int(round(allowedPlaceables, 0)),   # (allowance placeables)
+        allowedTilesTotal                   # (allowance total)
     ])
 
 # Compile the list for all characters
@@ -95,27 +112,41 @@ for character in session.query(Characters).all():
     # Discard characters that are in a guild or inactive
     if character.has_guild or character.is_inactive(INACTIVITY):
         continue
-    # Number of tiles taking bMult and pMult into account
-    numTiles = character.num_tiles(bMult=BUILDING_TILE_MULT, pMult=PLACEBALE_TILE_MULT)
-    allowedTiles = ALLOWANCE_BASE
-    # if allowedTiles is greater than the absolute amount of tiles of the guild disregard
-    if allowedTiles >= numTiles:
+    # Discard characters with no tiles
+    if character.id not in building_pieces:
         continue
-    excess = numTiles - allowedTiles
+    # building pices
+    buildingPieces = building_pieces[character.id]
+    # the adjusted number of placeables
+    placeablesAdjusted = placeables[character.id]
+    # Number of tiles taking bMult and pMult into account
+    totalTiles = buildingPieces + placeablesAdjusted
+    # allowedPlaceables is a ratio of the total tiles
+    allowedPlaceables = round(ALLOWANCE_BASE * PLACEBALE_TILE_RATIO, 0)
+    # if none of the allowances are exceeded disregard the character
+    if ALLOWANCE_BASE >= round(totalTiles, 0) and allowedPlaceables >= round(placeablesAdjusted, 0):
+        continue
+    excessTotal = max(totalTiles - ALLOWANCE_BASE, 0)
+    excessPlaceables = max(placeablesAdjusted - allowedPlaceables, 0)
+
     fullName = character.name + (
         ' (' + character.user.disc_user + ')' if character.user and character.user.disc_user else ''
     )
     disc_user = character.user.disc_user if character.user else ''
     values.append([
-        character.name,
-        disc_user,
-        fullName,
-        character.rank_name,
-        character.last_login.strftime("%d-%b-%Y"),
-        1,
-        numTiles,
-        excess,
-        allowedTiles
+        character.name,                             # Owner
+        disc_user,                                  # Discord Name (last to login)
+        fullName,                                   # (Char Name Discord Name)
+        character.rank_name,                        # (Rank)
+        character.last_login.strftime("%d-%b-%Y"),  # (Last Login)
+        1,                                          # Members (active / total)
+        int(round(totalTiles, 0)),                  # Building Pieces
+        int(round(placeablesAdjusted, 0)),          # Placeables (adjusted)
+        int(round(totalTiles, 0)),                  # Tiles (total)
+        int(round(excessPlaceables, 0)),            # (excess placeables)
+        int(round(excessTotal, 0)),                 # (excess total)
+        int(round(allowedPlaceables, 0)),           # (allowance placeables)
+        ALLOWANCE_BASE                              # (allowance total)
     ])
 session.close()
 
@@ -124,7 +155,7 @@ logger.debug("Sort values for upload.")
 if len(values) > 0:
     values.sort(key=itemgetter(6, 7), reverse=True)
 else:
-    values.append(["Nobody was over their tiles limit this week - yay!", '', '', '', '', '', '', '', ''])
+    values.append(["Nobody was over their tiles limit this week - yay!"] + [''] * 12)
 
 logger.debug("Format and upload data to tiles remediation sheet.")
 # combine headline with the new values
@@ -139,9 +170,9 @@ sheets.set_alignment(startRowIndex=2, endRowIndex=2, horizontalAlignment='LEFT')
 # format the datalines
 sheets.set_dimension_group(startIndex=2, endIndex=lastRow, hidden=True)
 sheets.set_bg_color(startRowIndex=3, endRowIndex=lastRow, color="white")
-sheets.set_wrap(startColumnIndex=10, endColumnIndex=12, startRowIndex=3, endRowIndex=lastRow, wrapStrategy='WRAP')
+sheets.set_wrap(startColumnIndex=14, endColumnIndex=16, startRowIndex=3, endRowIndex=lastRow, wrapStrategy='WRAP')
 sheets.set_format(
-    startColumnIndex=7, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow,
+    startColumnIndex=7, endColumnIndex=13, startRowIndex=3, endRowIndex=lastRow,
     type='NUMBER', pattern='#,##0'
 )
 sheets.set_alignment(
@@ -149,16 +180,16 @@ sheets.set_alignment(
     horizontalAlignment='LEFT', verticalAlignment='MIDDLE'
 )
 sheets.set_alignment(
-    startColumnIndex=6, endColumnIndex=9, startRowIndex=3, endRowIndex=lastRow,
+    startColumnIndex=6, endColumnIndex=13, startRowIndex=3, endRowIndex=lastRow,
     horizontalAlignment='CENTER', verticalAlignment='MIDDLE'
 )
 sheets.set_alignment(
-    startColumnIndex=10, startRowIndex=3, endRowIndex=lastRow,
+    startColumnIndex=14, startRowIndex=3, endRowIndex=lastRow,
     horizontalAlignment='LEFT', verticalAlignment='MIDDLE'
 )
 # update the newly inserted cells with the values
 sheets.commit()
-sheets.update('Tiles!A2:J' + str(lastRow), values)
+sheets.update('Tiles!A2:N' + str(lastRow), values)
 
 execTime = datetime.utcnow() - now
 execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
