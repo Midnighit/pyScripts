@@ -1,5 +1,3 @@
-# pyScripts Config live
-
 import os
 import logging
 from datetime import timedelta
