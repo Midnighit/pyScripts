@@ -8,7 +8,7 @@ from logger import get_logger
 from config import (
     RUINS_CLAN_ID, PLAYER_SPREADSHEET_ID, PLAYER_TPM_SHEET_ID, INACTIVITY, BUILDING_TILE_MULT, PLACEBALE_TILE_MULT,
     OWNER_WHITELIST, HIDE_WHITELISTED_OWNERS, ALLOWANCE_INCLUDES_INACTIVES, ALLOWANCE_BASE, ALLOWANCE_CLAN,
-    LOG_LEVEL_STDOUT, LOG_LEVEL_FILE
+    LOG_LEVEL_STDOUT, LOG_LEVEL_FILE, PLACEBALE_TILE_RATIO
 )
 
 # catch unhandled exceptions
@@ -94,9 +94,10 @@ for owner, data in members.items():
         int(round(placeables[owner], 0)),                                           # Placeables (adjusted)
         int(round(placeables[owner] / PLACEBALE_TILE_MULT, 0)),                     # Placeables (actual)
         int(round(building_pieces[owner] + placeables[owner], 0)),                  # Tiles (total)
-        int(round((building_pieces[owner] + placeables[owner]) / numMembers, 0)),   # Placeables (adjusted)
-        int(round(allowedTiles / 3, 0)),                                            # Tites (total)
-        allowedTiles
+        int(round((building_pieces[owner] + placeables[owner]) / numMembers, 0)),   # Tiles per member
+        # Allowance
+        int(round(allowedTiles * PLACEBALE_TILE_RATIO, 0)),                         # Placeables (adjusted)
+        allowedTiles                                                                # Tites (total)
     ])
 
 # if there are any values, order them by tiles in descending order
