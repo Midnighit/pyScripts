@@ -104,7 +104,7 @@ for char in deleted_chars:
     if user:
         player = f"{user.disc_user} ({user.disc_id}) with FuncomID {user.funcom_id} and PlayerID {char.player_id}"
     else:
-        player = f" with FuncomID {char.account.funcom_id} and PlayerID {char.player_id}"
+        player = f" with PlayerID {char.player_id}"
     logger.info(f"Deleting {char.name} ({char.id}) belonging to player {player}.")
     player_ids.update({char.player_id: char.name})
     char_ids.add(char.id)
