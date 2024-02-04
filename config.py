@@ -16,13 +16,11 @@ EVENT_LOG_HOLD_BACK = timedelta(days=7)  # number of days to keep in the event l
 CHAT_LOG_HOLD_BACK = timedelta(days=14)  # number of days to keep in the chat log of the google sheet
 RUINS_CLAN_ID = -20                      # id of the clan that all ownerless objects are moved into
 MIN_DIST = 50000                         # Min. distance that for a row to be listed on the google sheet.
-OWNER_WHITELIST = list(range(-19, 0)) + [154, 161, 163, 167, 178, 185, 247, 248, 554, 666, 726, 1293, 1368]
+OWNER_WHITELIST = list(range(-19, 0)) + [137, 91720, 297672]
 PREFABS = ['Prefab_Dwelling', 'Prefab_NordheimerBuilding', 'Prefab_Mound']
 OBJECT_LIMITS = [
-    {'max':  5, 'obj': ['Pippi_Glorb']},
-    {'max':  6, 'obj': ['Pippi_Flaggi']},
     {'max': 10, 'obj': ['Tot_A_BasicNPC'], 'pm': 1},
-    {'max':  3, 'obj': ['Tot_A_TraderNPC']},
+    {'max':  3, 'obj': ['Tot_A_TraderNPC'], 'pm': 1},
     {'max':  1, 'obj': ['Crafting_Beehive']},
     {'max':  2, 'obj': ['Crafting_FishNet', 'Crafting_CrabPot']},
     {'max':  2, 'obj': ['Compost']},
@@ -31,7 +29,7 @@ OBJECT_LIMITS = [
     {'max':  0, 'obj': ['FeedingContainer']},
     {'max':  0, 'obj': ['DwellingNewWall_.']},
     {'max':  0, 'obj': ['Bedroll_Clean', 'Bedroll_Fiber', 'Bedroll_Turanian']},
-    {'max':  2, 'obj': ['AnimalPen_Tier', 'AnimalPens', 'AnimalPen_Onestall']},
+    {'max':  2, 'obj': ['AnimalPen_Tier', 'AnimalPens', 'AnimalPen_Onestall', 'Shani_Workbench_Animalpen_With_Stable']},
     {'max':  2, 'obj': PREFABS, 'pm':  1}
 ]
 
