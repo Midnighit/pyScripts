@@ -1,6 +1,7 @@
 import sys
 import random
 import logging
+from time import time
 from datetime import datetime, timedelta
 from logger import get_logger
 from config import (
@@ -27,6 +28,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 # save current time
+start_time = time()
 now = datetime.utcnow()
 if LOG_LEVEL_STDOUT > logging.INFO:
     print("Executing ruins script...")
@@ -104,7 +106,7 @@ for char in deleted_chars:
     if user:
         player = f"{user.disc_user} ({user.disc_id}) with FuncomID {user.funcom_id} and PlayerID {char.player_id}"
     else:
-        player = f" with PlayerID {char.player_id}"
+        player = f" with FuncomID {char.account.funcom_id} and PlayerID {char.player_id}"
     logger.info(f"Deleting {char.name} ({char.id}) belonging to player {player}.")
     player_ids.update({char.player_id: char.name})
     char_ids.add(char.id)
@@ -255,8 +257,7 @@ for name, engine in engines.items():
         conn.execute('VACUUM')
         conn.execute('ANALYZE')
 
-execTime = datetime.utcnow() - now
-execTimeStr = str(execTime.seconds) + "." + str(execTime.microseconds)
+exec_time = time() - start_time
 if LOG_LEVEL_STDOUT > logging.INFO:
-    print(f"Done! Required time: {execTimeStr} sec.")
-logger.info(f"Done! Required time: {execTimeStr} sec.")
+    print(f"Done! Required time: {exec_time:.3f} sec.")
+logger.info(f"Done! Required time: {exec_time:.3f} sec.")
