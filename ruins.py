@@ -255,7 +255,10 @@ logger.debug("Cleaning up the db.")
 for name, engine in engines.items():
     with engine.connect() as conn:
         conn.execute('VACUUM')
+        conn.execute('REINDEX')
         conn.execute('ANALYZE')
+        conn.execute('PRAGMA integrity_check')
+        conn.execute('COMMIT')
 
 exec_time = time() - start_time
 if LOG_LEVEL_STDOUT > logging.INFO:
