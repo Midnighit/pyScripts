@@ -258,7 +258,9 @@ for name, engine in engines.items():
         conn.execute('REINDEX')
         conn.execute('ANALYZE')
         conn.execute('PRAGMA integrity_check')
-        conn.execute('COMMIT')
+        # If there are any pending changes, commit them
+        if conn.in_transaction():
+            conn.execute('COMMIT')
 
 exec_time = time() - start_time
 if LOG_LEVEL_STDOUT > logging.INFO:
